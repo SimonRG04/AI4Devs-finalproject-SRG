@@ -18,9 +18,16 @@ async function bootstrap() {
   
   // Configuración CORS para permitir solicitudes del frontend
   const frontendUrl = configService.get('FRONTEND_URL');
-  const corsOrigins = frontendUrl ? 
-    [frontendUrl, 'http://localhost:5173'] : 
-    '*';
+  const corsOrigins = [
+    'https://frontend-vuejs-production.up.railway.app',
+    'http://frontend-vuejs-production.up.railway.app',
+    'http://localhost:5173'
+  ];
+  
+  // Si hay una URL configurada, añadirla también
+  if (frontendUrl && !corsOrigins.includes(frontendUrl)) {
+    corsOrigins.push(frontendUrl);
+  }
   
   app.enableCors({
     origin: corsOrigins,
