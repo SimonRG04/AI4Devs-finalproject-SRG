@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Crear instancia de axios con la configuración básica
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: import.meta.env.MODE === 'production' ? import.meta.env.VITE_API_URL : '/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
