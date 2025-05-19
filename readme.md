@@ -23,13 +23,24 @@ Estoy desarrollando un sistema web innovador para la gestión integral de una cl
 
 El sistema "VetAI Connect" busca modernizar la gestión de clínicas veterinarias mediante una plataforma web que conecte a dueños de mascotas con veterinarios, facilitando la programación de citas, el seguimiento de historiales clínicos y, como elemento diferenciador, ofreciendo capacidades de pre-diagnóstico basadas en inteligencia artificial.
 
-### **0.4. URL del proyecto:**
+### **0.4. URL del proyecto desplegado:**
 
-Por definir 🧊
+- **Frontend:** https://frontend-vuejs-production.up.railway.app/
+- **Backend API:** https://backend-nestjs-production-4eba.up.railway.app/api
 
-### 0.5. URL o archivo comprimido del repositorio
+### **0.5. URL o archivo comprimido del repositorio:**
 
 https://github.com/SimonRG04/AI4Devs-finalproject-SRG
+
+### **0.6. Entornos de la aplicación:**
+
+#### Entorno de Producción
+- **Frontend:** https://frontend-vuejs-production.up.railway.app/
+- **Backend API:** https://backend-nestjs-production-4eba.up.railway.app/api
+
+#### Entorno de Desarrollo (Local)
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:3000/api
 
 ---
 
@@ -182,9 +193,15 @@ El diseño de VetAI Connect sigue los principios de simplicidad, accesibilidad y
 
 #### Verificación de instalación
 
-1. Backend disponible en: http://localhost:3000
-2. Frontend disponible en: http://localhost:8080
-3. Documentación API: http://localhost:3000/api-docs
+1. **Entorno de desarrollo local:**
+   - Backend disponible en: http://localhost:3000/api
+   - Frontend disponible en: http://localhost:8080
+   - Documentación API: http://localhost:3000/api-docs
+
+2. **Entorno de producción desplegado:**
+   - Backend disponible en: https://backend-nestjs-production-4eba.up.railway.app/api
+   - Frontend disponible en: https://frontend-vuejs-production.up.railway.app/
+   - Documentación API: https://backend-nestjs-production-4eba.up.railway.app/api-docs
 
 ---
 
@@ -303,63 +320,6 @@ Ejemplo de arquitectura de componentes:
 ```
 ├── components/
 │   ├── common/           # Componentes reutilizables
-│   ├── layout/           # Estructuras de página
-│   ├── auth/             # Componentes de autenticación
-│   ├── pets/             # Gestión de mascotas
-│   ├── appointments/     # Sistema de citas
-│   ├── medical/          # Historiales médicos
-│   └── ai-diagnosis/     # Componentes de IA
-```
-
-#### Backend (NestJS)
-
-El backend implementa una arquitectura modular siguiendo los principios SOLID:
-
-- **Controladores**: Manejo de rutas HTTP y validación inicial
-- **Servicios**: Lógica de negocio encapsulada y reutilizable
-- **Repositorios**: Patrón Repository para abstracción de base de datos
-- **DTOs**: Objetos de transferencia de datos para validación
-- **Guards**: Protección de rutas basada en roles y permisos
-- **Pipes**: Transformación y validación de datos entrantes
-- **Interceptores**: Manipulación uniforme de respuestas
-
-Módulos principales:
-
-1. **AuthModule**: Autenticación, autorización y gestión de sesiones
-2. **UsersModule**: Gestión de perfiles y roles
-3. **PetsModule**: Registro y gestión de mascotas
-4. **AppointmentsModule**: Sistema de citas y disponibilidad
-5. **MedicalRecordsModule**: Historiales clínicos y tratamientos
-6. **DiagnosisModule**: Integración con IA para pre-diagnósticos
-7. **NotificationsModule**: Sistema de alertas y comunicaciones
-
-#### Base de Datos (PostgreSQL)
-
-Diseño relacional optimizado para:
-
-- **Integridad referencial**: Uso extensivo de claves foráneas
-- **Normalización**: Esquema normalizado para reducir redundancia
-- **Indexes**: Índices estratégicos para consultas frecuentes
-- **Constraints**: Restricciones a nivel de base de datos para integridad
-- **Triggers**: Para ciertas operaciones automáticas (historial, auditoría)
-
-#### Integración IA
-
-La integración con servicios de IA externa se realiza mediante:
-
-- **Adapter Pattern**: Abstracción para posibilitar cambios de proveedor
-- **Queue System**: Procesamiento asíncrono para tareas intensivas
-- **Retry Logic**: Manejo de fallos en comunicación con APIs externas
-- **Result Caching**: Almacenamiento local de resultados para reducir llamadas
-
-### **2.3. Descripción de alto nivel del proyecto y estructura de ficheros**
-
-La organización del proyecto sigue una estructura modular con separación clara entre frontend y backend:
-
-```
-vetai-connect/
-├── frontend/                # Aplicación VueJS
-│   ├── public/              # Archivos estáticos
 │   │   ├── assets/          # Recursos (imágenes, fuentes, etc.)
 │   │   │   ├── assets/      # Recursos (imágenes, fuentes, etc.)
 │   │   │   ├── components/  # Componentes Vue reutilizables
@@ -822,6 +782,11 @@ Resultados de pre-diagnósticos generados por IA.
 ## 4. Especificación de la API
 
 La API de VetAI Connect sigue principios RESTful y está documentada siguiendo el estándar OpenAPI (Swagger). A continuación se detallan los endpoints principales organizados por recursos.
+
+### URLs de la API
+
+- **Producción**: https://backend-nestjs-production-4eba.up.railway.app/api
+- **Desarrollo local**: http://localhost:3000/api
 
 ### Autenticación
 
