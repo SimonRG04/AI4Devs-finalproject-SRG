@@ -199,3 +199,45 @@ Basado en nuestra planificación anterior, necesito implementar un cambio estrat
 - ¿Cómo se gestionarán los dominios personalizados si son necesarios?
 
 Por favor, proporciona una estrategia detallada para implementar este cambio manteniendo la integridad y funcionalidad del proyecto.
+
+# Prompt 3 en Cursor utilizando Claude 3.7 modo Thinking y Agent
+
+# Definición de estructura de archivos y configuración inicial para prueba de conectividad
+
+## Objetivo principal:
+Basado en las especificaciones del @readme.md, necesito que implementes la estructura completa de archivos para el frontend y backend del proyecto, incluyendo una implementación mínima funcional que permita verificar la correcta comunicación entre servicios y el despliegue exitoso en Railway.
+
+## Alcance del trabajo:
+- **Diseño estructural**: Crear la organización completa de directorios y archivos para ambas partes del sistema
+- **Implementación mínima**: Desarrollar únicamente endpoints y componentes esenciales para verificar conectividad
+- **Preparación para despliegue**: Incluir configuraciones necesarias para Railway
+
+## Requisitos específicos para el backend:
+1. Diseñar la estructura completa de carpetas siguiendo lo definido
+2. Implementar únicamente un endpoint de prueba (`/api/test` o similar) que responda con un "Hello World"
+3. Incluir configuración básica para conexiones, pero sin implementar lógica de negocio adicional
+4. Configurar los archivos necesarios para despliegue en Railway
+5. Documentar claramente cómo se manejarán las variables de entorno
+
+## Requisitos específicos para el frontend:
+1. Establecer la estructura completa de componentes, páginas y servicios
+2. Implementar únicamente una vista simple que consuma el endpoint de prueba del backend
+3. Mostrar el mensaje "Hello World" recibido del backend
+4. Incluir gestión básica de errores de conexión
+5. Configurar los archivos necesarios para despliegue en Railway
+
+## Entregables esperados:
+
+1. Archivos y código mínimo funcional para la prueba de conectividad
+2. Archivos de configuración necesarios para Railway
+3. Instrucciones detalladas para ejecutar localmente la prueba
+4. Documentación de los pasos para desplegar en Railway
+
+## Consideraciones importantes:
+- La estructura debe ser escalable para futuras implementaciones
+- Seguir las mejores prácticas de organización según las tecnologías definidas
+- Mantener consistencia con las convenciones establecidas en @readme.md
+- No implementar ninguna funcionalidad adicional en esta fase
+- Enfocar el diseño en facilitar un desarrollo incremental posterior
+
+Por favor, proporciona la estructura completa con el código mínimo necesario para verificar la conectividad entre frontend y backend cuando se despliegue en Railway.
