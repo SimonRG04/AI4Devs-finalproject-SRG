@@ -21,6 +21,15 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         }
       }
+    },
+    preview: {
+      port: process.env.PORT || 5173,
+      strictPort: true,
+      host: true, // Escuchar en todas las interfaces de red (0.0.0.0)
+      allowedHosts: [
+        'frontend-vuejs-production.up.railway.app',
+        '.railway.app' // Permitir todos los subdominios de railway.app
+      ]
     }
   }
 }) 
