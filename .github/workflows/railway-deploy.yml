@@ -18,7 +18,7 @@ jobs:
         
       - name: Deploy to Railway
         working-directory: ./backend
-        run: railway up
+        run: railway up --service backend
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
   
@@ -36,6 +36,6 @@ jobs:
         
       - name: Deploy to Railway
         working-directory: ./frontend
-        run: railway up
+        run: railway up --service frontend
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }} 
