@@ -14,17 +14,23 @@ async function bootstrap() {
     transform: true,
   }));
   
+  const configService = app.get(ConfigService);
+  
   // Configuración CORS para permitir solicitudes del frontend
+  const frontendUrl = configService.get('FRONTEND_URL');
+  const corsOrigins = frontendUrl ? 
+    [frontendUrl, 'http://localhost:5173'] : 
+    '*';
+  
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: corsOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
   
-  const configService = app.get(ConfigService);
   const port = configService.get('PORT') || 3000;
   
-  await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}/api`);
+  await app.listen(port, '0.0.0.0'); // Escuchar en todas las interfaces de red
+  console.log(`Application is running on port: ${port}`);
 }
 bootstrap(); 
