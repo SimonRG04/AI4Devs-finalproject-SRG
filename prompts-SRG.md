@@ -241,3 +241,37 @@ Basado en las especificaciones del @readme.md, necesito que implementes la estru
 - Enfocar el diseño en facilitar un desarrollo incremental posterior
 
 Por favor, proporciona la estructura completa con el código mínimo necesario para verificar la conectividad entre frontend y backend cuando se despliegue en Railway.
+
+
+# Prompt 5
+
+## Contexto
+Basándose en la información completa del archivo @readme.md, incluyendo el planteamiento del problema, el diseño de la solución y toda la definición técnica del proyecto.
+
+## Objetivo
+Crear un documento de planificación que estructure el desarrollo del proyecto en fases secuenciales, priorizando el backend como fundación del sistema.
+
+## Instrucciones Específicas
+
+### Fase 1: Backend y Testing
+- Analizar la arquitectura backend definida en @readme.md
+- Estructurar todos los componentes del backend según las especificaciones
+- Incluir la implementación completa de pruebas unitarias y de integración
+- Establecer la infraestructura de datos y servicios core
+
+### Fase 2: Frontend
+- Desarrollar la interfaz de usuario basándose en el backend ya implementado
+- Integrar con los endpoints y servicios desarrollados en la Fase 1
+
+## Entregable Esperado
+Un documento detallado que defina:
+1. Estructura técnica de cada fase
+2. Componentes específicos a desarrollar en cada etapa
+3. Dependencias entre fases
+4. Criterios de completitud para cada fase
+
+## Restricciones
+- Seguir estrictamente las especificaciones del @readme.md
+- Mantener la secuencia Backend → Frontend
+- No incluir elementos no mencionados en la documentación original
+- Mantener una capa gratuita de la herramienta utilizada o de costos muy reducidos
