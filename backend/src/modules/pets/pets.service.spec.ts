@@ -12,7 +12,6 @@ describe('PetsService', () => {
 
   const mockPet: Partial<Pet> = {
     id: 1,
-    clientId: 1,
     name: 'Max',
     species: PetSpecies.DOG,
     breed: 'Golden Retriever',
@@ -21,6 +20,7 @@ describe('PetsService', () => {
     weight: 25.5,
     medicalAlerts: 'Alérgico a la penicilina',
     photoUrl: 'https://example.com/photo.jpg',
+    clientId: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
     client: null,
@@ -177,6 +177,7 @@ describe('PetsService', () => {
 
     it('should throw ForbiddenException for unauthorized access', async () => {
       const mockPetWithDifferentOwner = createMockPet({
+        clientId: 2,
         client: { user: { id: 2 } } as any,
       });
 

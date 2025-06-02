@@ -22,8 +22,8 @@ import { Notification } from './modules/notifications/entities/notification.enti
 import { AuthModule } from './modules/auth/auth.module';
 import { PetsModule } from './modules/pets/pets.module';
 import { AppointmentsModule } from './modules/appointments/appointments.module';
+import { MedicalModule } from './modules/medical/medical.module';
 // import { UsersModule } from './modules/users/users.module';
-// import { MedicalModule } from './modules/medical/medical.module';
 // import { DiagnosisModule } from './modules/diagnosis/diagnosis.module';
 // import { NotificationsModule } from './modules/notifications/notifications.module';
 
@@ -71,8 +71,8 @@ import { AppointmentsModule } from './modules/appointments/appointments.module';
     AuthModule,
     PetsModule,
     AppointmentsModule,
+    MedicalModule,
     // UsersModule,
-    // MedicalModule,
     // DiagnosisModule,
     // NotificationsModule,
   ],
