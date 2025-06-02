@@ -275,3 +275,26 @@ Un documento detallado que defina:
 - Mantener la secuencia Backend → Frontend
 - No incluir elementos no mencionados en la documentación original
 - Mantener una capa gratuita de la herramienta utilizada o de costos muy reducidos
+
+
+# Prompt 6 
+
+Actúa como un experto en desarrollo backend. Tu tarea es implementar específicamente el punto 1 "BACKEND Y TESTING" del plan de desarrollo previamente establecido.
+
+Contexto:
+- Tenemos un plan de desarrollo ya construido
+- Necesitamos implementar únicamente el punto 1: "BACKEND Y TESTING"
+
+Instrucciones:
+1. Revisa los requisitos específicos del punto 1 del plan
+2. Proporciona una implementación detallada y práctica
+3. Incluye consideraciones de testing apropiadas
+4. Mantén el enfoque exclusivamente en backend y testing
+
+Formato de respuesta esperado:
+- Código funcional cuando sea aplicable
+- Explicaciones técnicas claras
+- Pasos de implementación ordenados
+- Estrategias de testing específicas
+
+Procede con la implementación del punto 1.
