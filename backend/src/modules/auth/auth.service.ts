@@ -18,6 +18,8 @@ export interface JwtPayload {
   sub: number;
   email: string;
   role: UserRole;
+  clientId?: number;
+  veterinarianId?: number;
   iat?: number;
   exp?: number;
 }
@@ -57,6 +59,13 @@ export class AuthService {
       email: user.email,
       role: user.role,
     };
+
+    // Agregar IDs específicos según el rol
+    if (user.role === UserRole.CLIENT && user.client) {
+      payload.clientId = user.client.id;
+    } else if (user.role === UserRole.VET && user.veterinarian) {
+      payload.veterinarianId = user.veterinarian.id;
+    }
 
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
@@ -103,7 +112,7 @@ export class AuthService {
         address,
       });
 
-      await this.clientRepository.save(client);
+      const savedClient = await this.clientRepository.save(client);
 
       // Cargar relaciones
       const userWithRelations = await this.userRepository.findOne({
@@ -116,6 +125,7 @@ export class AuthService {
         sub: savedUser.id,
         email: savedUser.email,
         role: savedUser.role,
+        clientId: savedClient.id,
       };
 
       const accessToken = this.jwtService.sign(payload);
@@ -151,6 +161,13 @@ export class AuthService {
       email: user.email,
       role: user.role,
     };
+
+    // Agregar IDs específicos según el rol
+    if (user.role === UserRole.CLIENT && user.client) {
+      payload.clientId = user.client.id;
+    } else if (user.role === UserRole.VET && user.veterinarian) {
+      payload.veterinarianId = user.veterinarian.id;
+    }
 
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
