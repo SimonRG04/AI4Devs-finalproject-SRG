@@ -212,7 +212,18 @@ const onSubmit = async (values) => {
     })
     
     toast.success('Cuenta creada exitosamente')
-    router.push('/dashboard')
+    
+    // Redirigir según el rol del usuario (los usuarios registrados son CLIENT por defecto)
+    if (authStore.isAdmin) {
+      router.push('/admin')
+    } else if (authStore.isVet) {
+      router.push('/vet')
+    } else if (authStore.isClient) {
+      router.push('/dashboard')
+    } else {
+      // Fallback por si el rol no está definido
+      router.push('/dashboard')
+    }
     
   } catch (error) {
     console.error('Registration error:', error)

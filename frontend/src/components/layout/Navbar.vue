@@ -1,5 +1,5 @@
 <template>
-  <nav class="bg-white border-b border-gray-200 fixed w-full z-30 top-0">
+  <Disclosure as="nav" class="bg-white border-b border-gray-200 fixed w-full z-30 top-0" v-slot="{ open }">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16">
         <!-- Logo y navegación principal -->
@@ -242,7 +242,7 @@
         </div>
       </div>
     </DisclosurePanel>
-  </nav>
+  </Disclosure>
 </template>
 
 <script setup>

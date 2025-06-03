@@ -203,10 +203,15 @@ const handleLogin = async (values) => {
     
     toast.success(`¡Bienvenido, ${authStore.userName}!`)
     
-    // Redirigir según el rol
-    if (authStore.isVet) {
+    // Redirigir según el rol del usuario
+    if (authStore.isAdmin) {
+      router.push('/admin')
+    } else if (authStore.isVet) {
       router.push('/vet')
+    } else if (authStore.isClient) {
+      router.push('/dashboard')
     } else {
+      // Fallback por si el rol no está definido o es desconocido
       router.push('/dashboard')
     }
   } catch (error) {
