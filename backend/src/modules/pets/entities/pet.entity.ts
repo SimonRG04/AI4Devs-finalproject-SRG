@@ -69,11 +69,29 @@ export class Pet {
   @IsPositive()
   weight?: number;
 
+  @Column({ nullable: true })
+  color?: string;
+
+  @Column({ name: 'microchip_id', nullable: true })
+  microchipId?: string;
+
+  @Column({ name: 'is_neutered', default: false })
+  isNeutered: boolean;
+
+  @Column({ name: 'medical_conditions', type: 'text', nullable: true })
+  medicalConditions?: string;
+
+  @Column({ type: 'text', nullable: true })
+  allergies?: string;
+
   @Column({ name: 'medical_alerts', type: 'text', nullable: true })
   medicalAlerts?: string;
 
   @Column({ name: 'photo_url', nullable: true })
   photoUrl?: string;
+
+  @Column({ type: 'text', nullable: true })
+  notes?: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

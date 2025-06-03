@@ -1,181 +1,233 @@
 import { AppDataSource } from '../../config/database.config';
+import * as bcrypt from 'bcrypt';
+
+// Entidades
 import { User, UserRole } from '../../modules/users/entities/user.entity';
 import { Client } from '../../modules/users/entities/client.entity';
 import { Veterinarian } from '../../modules/users/entities/veterinarian.entity';
 import { Pet, PetSpecies, PetGender } from '../../modules/pets/entities/pet.entity';
-import * as bcrypt from 'bcrypt';
+import { Appointment, AppointmentStatus } from '../../modules/appointments/entities/appointment.entity';
 
-async function seed() {
+async function runSeeds() {
+  console.log('🌱 Iniciando seeds de base de datos...');
+
+  await AppDataSource.initialize();
+
+  const userRepository = AppDataSource.getRepository(User);
+  const clientRepository = AppDataSource.getRepository(Client);
+  const veterinarianRepository = AppDataSource.getRepository(Veterinarian);
+  const petRepository = AppDataSource.getRepository(Pet);
+  const appointmentRepository = AppDataSource.getRepository(Appointment);
+
   try {
-    await AppDataSource.initialize();
-    console.log('🌱 Iniciando seeding de la base de datos...');
-
-    const userRepository = AppDataSource.getRepository(User);
-    const clientRepository = AppDataSource.getRepository(Client);
-    const veterinarianRepository = AppDataSource.getRepository(Veterinarian);
-    const petRepository = AppDataSource.getRepository(Pet);
-
-    // Limpiar datos existentes en orden correcto (respetando foreign keys)
+    // Limpiar datos existentes usando consultas SQL directas
     console.log('🧹 Limpiando datos existentes...');
-    
-    // Usar DELETE en lugar de TRUNCATE para evitar problemas con foreign keys
     await AppDataSource.query('DELETE FROM appointments WHERE 1=1');
-    await AppDataSource.query('DELETE FROM vaccinations WHERE 1=1');
-    await AppDataSource.query('DELETE FROM ai_diagnoses WHERE 1=1');
-    await AppDataSource.query('DELETE FROM medical_records WHERE 1=1');
     await AppDataSource.query('DELETE FROM pets WHERE 1=1');
-    await AppDataSource.query('DELETE FROM clients WHERE 1=1');
     await AppDataSource.query('DELETE FROM veterinarians WHERE 1=1');
+    await AppDataSource.query('DELETE FROM clients WHERE 1=1');
     await AppDataSource.query('DELETE FROM users WHERE 1=1');
 
-    console.log('🧹 Datos existentes eliminados');
+    // Hash para contraseñas
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash('123456', saltRounds);
 
-    // Crear usuario administrador
-    const adminPassword = await bcrypt.hash('admin123', 12);
-    const adminUser = userRepository.create({
-      email: 'admin@vetai-connect.com',
-      password: adminPassword,
-      firstName: 'Admin',
-      lastName: 'Sistema',
-      phoneNumber: '+573001234567',
-      role: UserRole.ADMIN,
-    });
-    await userRepository.save(adminUser);
-    console.log('👤 Usuario administrador creado');
-
-    // Crear veterinario de prueba
-    const vetPassword = await bcrypt.hash('vet123', 12);
-    const vetUser = userRepository.create({
-      email: 'veterinario@vetai-connect.com',
-      password: vetPassword,
-      firstName: 'Dr. María',
-      lastName: 'González',
-      phoneNumber: '+573007654321',
+    // 1. Crear usuarios y veterinarios
+    console.log('👨‍⚕️ Creando veterinarios...');
+    
+    const vetUser1 = userRepository.create({
+      email: 'dr.garcia@vetai.com',
+      password: hashedPassword,
+      firstName: 'María',
+      lastName: 'García',
+      phoneNumber: '+1234567890',
       role: UserRole.VET,
     });
-    const savedVetUser = await userRepository.save(vetUser);
+    const savedVetUser1 = await userRepository.save(vetUser1);
 
-    const veterinarian = veterinarianRepository.create({
-      userId: savedVetUser.id,
-      specialization: 'Medicina General Veterinaria',
-      bio: 'Veterinaria con 10 años de experiencia en medicina general y cirugía menor.',
-      licenseNumber: 'VET-2024-001',
-      availabilityHours: {
-        monday: { start: '08:00', end: '18:00', isAvailable: true },
-        tuesday: { start: '08:00', end: '18:00', isAvailable: true },
-        wednesday: { start: '08:00', end: '18:00', isAvailable: true },
-        thursday: { start: '08:00', end: '18:00', isAvailable: true },
-        friday: { start: '08:00', end: '17:00', isAvailable: true },
-        saturday: { start: '09:00', end: '14:00', isAvailable: true },
-        sunday: { start: '09:00', end: '13:00', isAvailable: false },
-      },
+    const veterinarian1 = veterinarianRepository.create({
+      userId: savedVetUser1.id,
+      licenseNumber: 'VET-001-2024',
+      specialization: 'Medicina General y Cirugía',
+      bio: 'Veterinaria especializada en medicina general con experiencia en cirugía menor y medicina preventiva.',
     });
-    await veterinarianRepository.save(veterinarian);
-    console.log('🩺 Veterinario de prueba creado');
+    await veterinarianRepository.save(veterinarian1);
 
-    // Crear clientes de prueba
-    const clientPassword = await bcrypt.hash('cliente123', 12);
+    const vetUser2 = userRepository.create({
+      email: 'dr.rodriguez@vetai.com',
+      password: hashedPassword,
+      firstName: 'Carlos',
+      lastName: 'Rodríguez',
+      phoneNumber: '+1234567891',
+      role: UserRole.VET,
+    });
+    const savedVetUser2 = await userRepository.save(vetUser2);
+
+    const veterinarian2 = veterinarianRepository.create({
+      userId: savedVetUser2.id,
+      licenseNumber: 'VET-002-2024',
+      specialization: 'Dermatología y Alergias',
+      bio: 'Especialista en dermatología veterinaria y tratamiento de alergias en mascotas.',
+    });
+    await veterinarianRepository.save(veterinarian2);
+
+    // 2. Crear usuarios clientes
+    console.log('👥 Creando clientes...');
     
-    // Cliente 1
-    const client1User = userRepository.create({
-      email: 'juan.perez@ejemplo.com',
-      password: clientPassword,
-      firstName: 'Juan',
-      lastName: 'Pérez',
-      phoneNumber: '+573009876543',
+    const clientUser1 = userRepository.create({
+      email: 'ana.martinez@email.com',
+      password: hashedPassword,
+      firstName: 'Ana',
+      lastName: 'Martínez',
+      phoneNumber: '+1234567892',
       role: UserRole.CLIENT,
     });
-    const savedClient1User = await userRepository.save(client1User);
+    const savedClientUser1 = await userRepository.save(clientUser1);
 
     const client1 = clientRepository.create({
-      userId: savedClient1User.id,
-      address: 'Calle 123 #45-67, Bogotá, Colombia',
+      userId: savedClientUser1.id,
+      address: 'Calle 123 #45-67, Bogotá',
     });
     const savedClient1 = await clientRepository.save(client1);
 
-    // Cliente 2
-    const client2User = userRepository.create({
-      email: 'ana.garcia@ejemplo.com',
-      password: clientPassword,
-      firstName: 'Ana',
-      lastName: 'García',
-      phoneNumber: '+573005432109',
+    const clientUser2 = userRepository.create({
+      email: 'luis.torres@email.com',
+      password: hashedPassword,
+      firstName: 'Luis',
+      lastName: 'Torres',
+      phoneNumber: '+1234567894',
       role: UserRole.CLIENT,
     });
-    const savedClient2User = await userRepository.save(client2User);
+    const savedClientUser2 = await userRepository.save(clientUser2);
 
     const client2 = clientRepository.create({
-      userId: savedClient2User.id,
-      address: 'Carrera 45 #12-34, Medellín, Colombia',
+      userId: savedClientUser2.id,
+      address: 'Carrera 50 #12-34, Medellín',
     });
     const savedClient2 = await clientRepository.save(client2);
 
-    console.log('👥 Clientes de prueba creados');
+    const clientUser3 = userRepository.create({
+      email: 'sofia.hernandez@email.com',
+      password: hashedPassword,
+      firstName: 'Sofía',
+      lastName: 'Hernández',
+      phoneNumber: '+1234567896',
+      role: UserRole.CLIENT,
+    });
+    const savedClientUser3 = await userRepository.save(clientUser3);
 
-    // Crear mascotas de prueba
+    const client3 = clientRepository.create({
+      userId: savedClientUser3.id,
+      address: 'Avenida 80 #25-45, Cali',
+    });
+    const savedClient3 = await clientRepository.save(client3);
+
+    // 3. Crear mascotas
+    console.log('🐕 Creando mascotas...');
+    
     const pet1 = petRepository.create({
       clientId: savedClient1.id,
       name: 'Max',
       species: PetSpecies.DOG,
       breed: 'Golden Retriever',
-      birthDate: new Date('2020-03-15'),
       gender: PetGender.MALE,
+      birthDate: new Date('2020-03-15'),
       weight: 28.5,
-      medicalAlerts: 'Alérgico al pollo. Sensible a medicamentos con penicilina.',
     });
+    const savedPet1 = await petRepository.save(pet1);
 
     const pet2 = petRepository.create({
       clientId: savedClient1.id,
       name: 'Luna',
       species: PetSpecies.CAT,
-      breed: 'Siamés',
-      birthDate: new Date('2021-07-22'),
+      breed: 'Persa',
       gender: PetGender.FEMALE,
+      birthDate: new Date('2021-07-22'),
       weight: 4.2,
-      medicalAlerts: 'Tendencia a problemas urinarios. Dieta especial.',
     });
+    const savedPet2 = await petRepository.save(pet2);
 
     const pet3 = petRepository.create({
       clientId: savedClient2.id,
       name: 'Rocky',
       species: PetSpecies.DOG,
       breed: 'Bulldog Francés',
-      birthDate: new Date('2019-11-08'),
       gender: PetGender.MALE,
+      birthDate: new Date('2019-11-08'),
       weight: 12.8,
-      medicalAlerts: 'Problemas respiratorios leves. Evitar ejercicio intenso.',
     });
+    const savedPet3 = await petRepository.save(pet3);
 
     const pet4 = petRepository.create({
-      clientId: savedClient2.id,
-      name: 'Coco',
-      species: PetSpecies.BIRD,
-      breed: 'Canario',
+      clientId: savedClient3.id,
+      name: 'Bella',
+      species: PetSpecies.DOG,
+      breed: 'Labrador',
+      gender: PetGender.FEMALE,
       birthDate: new Date('2022-01-10'),
-      gender: PetGender.UNKNOWN,
-      weight: 0.02,
+      weight: 22.0,
     });
+    const savedPet4 = await petRepository.save(pet4);
 
-    await petRepository.save([pet1, pet2, pet3, pet4]);
-    console.log('🐕 Mascotas de prueba creadas');
+    // 4. Crear citas de ejemplo
+    console.log('📅 Creando citas de ejemplo...');
+    
+    // Cita futura - programada
+    const appointment1 = appointmentRepository.create({
+      petId: savedPet1.id,
+      veterinarianId: veterinarian1.id,
+      dateTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días desde hoy
+      reason: 'Chequeo general y vacunación',
+      status: AppointmentStatus.SCHEDULED,
+    });
+    await appointmentRepository.save(appointment1);
 
-    console.log('✅ Seeding completado exitosamente!');
-    console.log('\n📋 Usuarios creados:');
-    console.log('Admin: admin@vetai-connect.com / admin123');
-    console.log('Veterinario: veterinario@vetai-connect.com / vet123');
-    console.log('Cliente 1: juan.perez@ejemplo.com / cliente123');
-    console.log('Cliente 2: ana.garcia@ejemplo.com / cliente123');
+    // Cita futura - programada  
+    const appointment2 = appointmentRepository.create({
+      petId: savedPet2.id,
+      veterinarianId: veterinarian2.id,
+      dateTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 días desde hoy
+      reason: 'Control dermatológico',
+      status: AppointmentStatus.SCHEDULED,
+    });
+    await appointmentRepository.save(appointment2);
+
+    // 5. Crear usuario administrador
+    console.log('👑 Creando usuario administrador...');
+    
+    const adminUser = userRepository.create({
+      email: 'admin@vetai.com',
+      password: hashedPassword,
+      firstName: 'Admin',
+      lastName: 'VetAI',
+      phoneNumber: '+1234567999',
+      role: UserRole.ADMIN,
+    });
+    await userRepository.save(adminUser);
+
+    console.log('✅ Seeds completados exitosamente!');
+    console.log('\n📊 Datos creados:');
+    console.log('• 6 usuarios (2 veterinarios, 3 clientes, 1 admin)');
+    console.log('• 2 veterinarios');
+    console.log('• 3 clientes');
+    console.log('• 4 mascotas');
+    console.log('• 2 citas');
+    console.log('\n🔑 Credenciales de acceso:');
+    console.log('Veterinarios:');
+    console.log('  • dr.garcia@vetai.com / 123456');
+    console.log('  • dr.rodriguez@vetai.com / 123456');
+    console.log('Clientes:');
+    console.log('  • ana.martinez@email.com / 123456');
+    console.log('  • luis.torres@email.com / 123456');
+    console.log('  • sofia.hernandez@email.com / 123456');
+    console.log('Admin:');
+    console.log('  • admin@vetai.com / 123456');
 
   } catch (error) {
-    console.error('❌ Error durante el seeding:', error);
+    console.error('❌ Error ejecutando seeds:', error);
   } finally {
     await AppDataSource.destroy();
   }
 }
 
-// Ejecutar seeding si el archivo se ejecuta directamente
-if (require.main === module) {
-  seed();
-}
-
-export default seed; 
+runSeeds(); 

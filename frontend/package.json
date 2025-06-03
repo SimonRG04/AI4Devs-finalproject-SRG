@@ -9,18 +9,30 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
   },
   "dependencies": {
+    "@headlessui/vue": "^1.7.16",
+    "@heroicons/vue": "^2.0.18",
+    "@tailwindcss/forms": "^0.5.7",
+    "@vee-validate/rules": "^4.11.8",
     "axios": "^1.6.0",
+    "chart.js": "^4.4.0",
+    "date-fns": "^2.30.0",
     "pinia": "^2.1.7",
+    "primeicons": "^6.0.1",
+    "primevue": "^3.45.0",
+    "vee-validate": "^4.11.8",
     "vue": "^3.3.4",
-    "vue-router": "^4.2.5"
+    "vue-chartjs": "^5.2.0",
+    "vue-router": "^4.2.5",
+    "vue-toastification": "^2.0.0-rc.5",
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.4.0",
-    "autoprefixer": "^10.4.16",
+    "autoprefixer": "^10.4.21",
     "eslint": "^8.49.0",
     "eslint-plugin-vue": "^9.17.0",
-    "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^3.4.17",
     "vite": "^4.4.11"
   }
-} 
+}
