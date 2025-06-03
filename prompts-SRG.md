@@ -298,3 +298,7 @@ Formato de respuesta esperado:
 - Estrategias de testing específicas
 
 Procede con la implementación del punto 1.
+
+# Prompt 7
+
+Como experto en desarrollo frontend podrías revisar el fichero de @frontend y todo lo que incluye para verificar que funcionen correctamente todas las dependencias, componentes, routers, etc. Que los estilos y dependencias se ajusten correctamente con lo definido en el @plan-desarrollo-vetai-connect.md y la logica que ya tenemos establecida en @backend. Revisa todo esto y realiza los ajustes pertinentes al frontend. Hay algunos partes que están faltantes por desarrollo como la parte del diagnostico por IA, notificaciones y despliegues pero por ahora revisemos lo que ya tenemos y que funcione correctamente para que a partir de allí sigamos con las implementaciones.
