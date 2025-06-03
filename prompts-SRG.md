@@ -243,7 +243,7 @@ Basado en las especificaciones del @readme.md, necesito que implementes la estru
 Por favor, proporciona la estructura completa con el código mínimo necesario para verificar la conectividad entre frontend y backend cuando se despliegue en Railway.
 
 
-# Prompt 5
+# Prompt 5 en Cursor utilizando Claude 3.7 modo Thinking y Agent
 
 ## Contexto
 Basándose en la información completa del archivo @readme.md, incluyendo el planteamiento del problema, el diseño de la solución y toda la definición técnica del proyecto.
@@ -277,7 +277,7 @@ Un documento detallado que defina:
 - Mantener una capa gratuita de la herramienta utilizada o de costos muy reducidos
 
 
-# Prompt 6 
+# Prompt 6 en Cursor utilizando Claude 3.7 modo Thinking y Agent 
 
 Actúa como un experto en desarrollo backend. Tu tarea es implementar específicamente el punto 1 "BACKEND Y TESTING" del plan de desarrollo previamente establecido.
 
@@ -299,6 +299,18 @@ Formato de respuesta esperado:
 
 Procede con la implementación del punto 1.
 
-# Prompt 7
+# Prompt 7 en Cursor utilizando Claude 3.7 modo Thinking y Agent
 
 Como experto en desarrollo frontend podrías revisar el fichero de @frontend y todo lo que incluye para verificar que funcionen correctamente todas las dependencias, componentes, routers, etc. Que los estilos y dependencias se ajusten correctamente con lo definido en el @plan-desarrollo-vetai-connect.md y la logica que ya tenemos establecida en @backend. Revisa todo esto y realiza los ajustes pertinentes al frontend. Hay algunos partes que están faltantes por desarrollo como la parte del diagnostico por IA, notificaciones y despliegues pero por ahora revisemos lo que ya tenemos y que funcione correctamente para que a partir de allí sigamos con las implementaciones.
+
+# Prompt 8 en Cursor utilizando Claude 3.7 modo Thinking y Agent
+
+Los estilos no se están visualizando correctamente, podrías revisar que puede estar pasando en este aspecto?
+
+# Prompt 9 en Cursor utilizando Claude 3.7 modo Thinking y Agent
+
+Podrías hacer un ajuste en esta configuración de railway para hacer la migración, es bueno manejarlo así no? Para que en la misma instancia de railway cree las tablas y demás o no? O como podemos hacer eso?
+
+# Prompt 10 en Cursor utilizando Claude 3.7 modo Thinking y Agent
+
+La idea es que se haga la migración y la seed cuando se despliega por primera vez el micro, por variable de entorno podemos configurar si queremos que se ejecute la migración o la seed
