@@ -289,3 +289,53 @@ Para soporte técnico:
 - ✅ API REST completa
 - ✅ Documentación Swagger
 - ✅ Tests unitarios e integración 
+
+## 🚀 Deploy en Railway
+
+### Variables de Entorno para Deploy
+
+Para controlar la ejecución de migraciones y seeds durante el deploy, configura estas variables de entorno en Railway:
+
+| Variable | Descripción | Valores | Default |
+|----------|-------------|---------|---------|
+| `IS_FIRST_DEPLOY` | Ejecuta migraciones y seeds en el primer deploy | `true`/`false` | `false` |
+| `RUN_MIGRATIONS` | Fuerza la ejecución de migraciones | `true`/`false` | `false` |
+| `RUN_SEEDS` | Fuerza la ejecución de seeds | `true`/`false` | `false` |
+| `FORCE_SETUP` | Ejecuta tanto migraciones como seeds | `true`/`false` | `false` |
+
+### Escenarios de Uso
+
+#### Primer Deploy (Configuración inicial)
+```bash
+IS_FIRST_DEPLOY=true
+```
+Esto ejecutará automáticamente migraciones y seeds.
+
+#### Deploy Regular (Solo migraciones)
+```bash
+RUN_MIGRATIONS=true
+RUN_SEEDS=false
+```
+
+#### Deploy de Emergencia (Configuración completa)
+```bash
+FORCE_SETUP=true
+```
+
+#### Deploy Normal (Sin cambios en DB)
+```bash
+# No configurar ninguna variable o todas en false
+```
+
+### Variables de Base de Datos
+
+También asegúrate de configurar las variables de la base de datos:
+
+```bash
+DATABASE_HOST=<tu-host>
+DATABASE_PORT=5432
+DATABASE_USERNAME=<tu-usuario>
+DATABASE_PASSWORD=<tu-password>
+DATABASE_NAME=<tu-base-de-datos>
+NODE_ENV=production
+``` 
