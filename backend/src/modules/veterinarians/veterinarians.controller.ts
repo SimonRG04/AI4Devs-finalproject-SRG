@@ -17,6 +17,14 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 export class VeterinariansController {
   constructor(private readonly veterinariansService: VeterinariansService) {}
 
+  @Get('debug/list-all')
+  @ApiOperation({ summary: '[DEBUG] Listar todos los veterinarios con sus IDs' })
+  @ApiResponse({ status: 200, description: 'Lista de veterinarios obtenida exitosamente' })
+  async debugListAll() {
+    // Este es un endpoint temporal para debug - remover en producción
+    return this.veterinariansService.findAll({ page: 1, limit: 100 });
+  }
+
   @Get()
   @ApiOperation({ summary: 'Obtener lista de veterinarios' })
   @ApiResponse({ status: 200, description: 'Lista de veterinarios obtenida exitosamente' })

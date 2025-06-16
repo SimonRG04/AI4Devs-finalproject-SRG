@@ -102,6 +102,17 @@ export const useMedicalRecordsStore = defineStore('medicalRecords', () => {
       loading.value = true
       error.value = null
       
+      // Validar datos básicos antes de enviar
+      if (!recordData.petId) {
+        throw new Error('ID de mascota es requerido')
+      }
+      if (!recordData.diagnosis) {
+        throw new Error('Diagnóstico es requerido')
+      }
+      if (!recordData.treatment) {
+        throw new Error('Tratamiento es requerido')
+      }
+      
       const response = await medicalRecordService.createMedicalRecord(recordData)
       const newRecord = response.data || response
       
@@ -110,7 +121,8 @@ export const useMedicalRecordsStore = defineStore('medicalRecords', () => {
       
       return newRecord
     } catch (err) {
-      error.value = err.response?.data?.message || 'Error al crear registro médico'
+      console.error('Error creating medical record:', err)
+      error.value = err.response?.data?.message || err.message || 'Error al crear registro médico'
       throw err
     } finally {
       loading.value = false

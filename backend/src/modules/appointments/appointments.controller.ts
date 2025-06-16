@@ -420,9 +420,19 @@ export class AppointmentsController {
   })
   async getUpcomingAppointments(
     @CurrentUser() user: any,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('limit') limitParam?: string,
   ) {
-    return this.appointmentsService.getUpcomingAppointments(user, limit || 5);
+    // Manejo manual de la conversión para evitar errores de validación
+    let limit = 5; // valor por defecto
+    
+    if (limitParam) {
+      const parsedLimit = parseInt(limitParam, 10);
+      if (!isNaN(parsedLimit) && parsedLimit > 0) {
+        limit = parsedLimit;
+      }
+    }
+    
+    return this.appointmentsService.getUpcomingAppointments(user, limit);
   }
 
   @Get('today')

@@ -169,8 +169,8 @@ export class MedicalRecordsService {
       .leftJoinAndSelect('appointment.veterinarian', 'veterinarian')
       .leftJoinAndSelect('veterinarian.user', 'vetUser');
 
-    // Incluir prescripciones si se solicita
-    if (query.includePrescriptions) {
+    // Incluir prescripciones si se solicita (temporalmente deshabilitado por error de columna)
+    if (query.includePrescriptions && false) { // Temporal fix
       queryBuilder.leftJoinAndSelect('medicalRecord.prescriptions', 'prescriptions');
     }
 

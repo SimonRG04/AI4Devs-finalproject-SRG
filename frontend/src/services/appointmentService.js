@@ -42,13 +42,13 @@ const appointmentService = {
 
   // Confirmar cita
   async confirmAppointment(id) {
-    const response = await apiClient.patch(`/appointments/${id}/confirm`)
+    const response = await apiClient.put(`/appointments/${id}/confirm`)
     return response.data
   },
 
   // Completar cita
   async completeAppointment(id) {
-    const response = await apiClient.patch(`/appointments/${id}/complete`)
+    const response = await apiClient.put(`/appointments/${id}/complete`)
     return response.data
   },
 
@@ -84,17 +84,59 @@ const appointmentService = {
     return response.data
   },
 
-  // Obtener próximas citas
+  // Obtener próximas citas - versión que funciona con veterinarios
   async getUpcomingAppointments(limit = 5) {
     const response = await apiClient.get('/appointments/upcoming', {
-      params: { limit }
+      params: { limit: limit.toString() }
     })
     return response.data
+  },
+
+  // Obtener citas de hoy para veterinario (usando endpoint específico)
+  async getMyVetTodayAppointments() {
+    const today = new Date().toISOString().split('T')[0]
+    const response = await apiClient.get('/veterinarians/my-appointments', { 
+      params: { date: today } 
+    })
+    return response.data
+  },
+
+  // Obtener próximas citas para veterinario (usando endpoint específico)
+  async getMyVetUpcomingAppointments(limit = 5) {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const dateFrom = tomorrow.toISOString().split('T')[0]
+    
+    const response = await apiClient.get('/veterinarians/my-appointments', { 
+      params: { dateFrom } 
+    })
+    
+    // Aplicar límite del lado del cliente
+    const data = response?.data || response || []
+    return Array.isArray(data) ? data.slice(0, limit) : []
   },
 
   // Obtener mis citas (para clientes)
   async getMyAppointments(params = {}) {
     const response = await apiClient.get('/appointments/my-appointments', { params })
+    return response.data
+  },
+
+  // Obtener citas para veterinarios (método que faltaba)
+  async getVetAppointments(params = {}) {
+    const response = await apiClient.get('/appointments', { params })
+    return response.data
+  },
+
+  // Obtener mis citas como veterinario (usando el endpoint específico del veterinario)
+  async getMyVetAppointments(params = {}) {
+    const response = await apiClient.get('/veterinarians/my-appointments', { params })
+    return response.data
+  },
+
+  // Actualizar estado de cita (método que faltaba)
+  async updateAppointmentStatus(id, status) {
+    const response = await apiClient.patch(`/appointments/${id}`, { status })
     return response.data
   },
 

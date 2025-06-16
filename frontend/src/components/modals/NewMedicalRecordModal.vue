@@ -314,23 +314,23 @@ const submitForm = async () => {
     loading.value = true
     
     const medicalRecordData = {
-      petId: props.petId,
+      petId: Number(props.petId),
       title: form.title,
-      symptoms: form.symptoms,
       diagnosis: form.diagnosis,
       treatment: form.treatment,
+      symptoms: form.symptoms || null,
       temperature: form.temperature || null,
       weight: form.weight || null,
       notes: form.notes || null,
       prescriptions: form.prescriptions
         .filter(p => p.medicationName && p.dosage && p.frequency)
         .map(p => ({
-          medicationName: p.medicationName,  // Backend procesará esto como medication
+          medication: p.medicationName,  // Backend espera 'medication' no 'medicationName'
           dosage: p.dosage,
-          frequency: p.frequency,  // Ya viene en formato correcto del select
+          frequency: p.frequency,
           instructions: p.instructions || null,
-          startDate: new Date().toISOString().split('T')[0],  // Fecha actual por defecto
-          durationDays: 7,  // Duración por defecto de 7 días
+          startDate: new Date().toISOString().split('T')[0],
+          durationDays: parseInt(p.duration) || 7,
           status: 'ACTIVE',
           quantity: 1,
           unit: 'comprimidos'

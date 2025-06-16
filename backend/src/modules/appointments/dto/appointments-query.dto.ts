@@ -8,7 +8,7 @@ import {
   Max, 
   IsNumber,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { AppointmentStatus } from '../entities/appointment.entity';
 
 export class AppointmentsQueryDto {
@@ -18,6 +18,7 @@ export class AppointmentsQueryDto {
     minimum: 1,
   })
   @IsOptional()
+  @Transform(({ value }) => value === '' || value === null || value === undefined ? undefined : parseInt(value))
   @Type(() => Number)
   @IsPositive({ message: 'La página debe ser un número positivo' })
   @Min(1, { message: 'La página mínima es 1' })
@@ -30,6 +31,7 @@ export class AppointmentsQueryDto {
     maximum: 100,
   })
   @IsOptional()
+  @Transform(({ value }) => value === '' || value === null || value === undefined ? undefined : parseInt(value))
   @Type(() => Number)
   @IsPositive({ message: 'El límite debe ser un número positivo' })
   @Min(1, { message: 'El límite mínimo es 1' })
@@ -50,6 +52,7 @@ export class AppointmentsQueryDto {
     example: 1,
   })
   @IsOptional()
+  @Transform(({ value }) => value === '' || value === null || value === undefined ? undefined : parseInt(value))
   @Type(() => Number)
   @IsNumber({}, { message: 'El ID de mascota debe ser un número' })
   @IsPositive({ message: 'El ID de mascota debe ser positivo' })
@@ -60,6 +63,7 @@ export class AppointmentsQueryDto {
     example: 1,
   })
   @IsOptional()
+  @Transform(({ value }) => value === '' || value === null || value === undefined ? undefined : parseInt(value))
   @Type(() => Number)
   @IsNumber({}, { message: 'El ID de veterinario debe ser un número' })
   @IsPositive({ message: 'El ID de veterinario debe ser positivo' })

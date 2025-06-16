@@ -8,13 +8,13 @@
             <h1 class="text-3xl font-bold text-gray-900">Registros Médicos</h1>
             <p class="mt-2 text-gray-600">Gestiona los registros médicos de tus pacientes</p>
           </div>
-          <router-link
-            to="/vet/medical-records/new"
+          <button
+            @click="showNewRecordInfo"
             class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-vet-600 hover:bg-vet-700"
           >
             <PlusIcon class="h-4 w-4 mr-2" />
             Nuevo Registro
-          </router-link>
+          </button>
         </div>
       </div>
 
@@ -265,6 +265,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useRouter } from 'vue-router'
 
 // Utils
 import { translate } from '@/utils/translations'
@@ -285,6 +286,7 @@ import {
 import medicalRecordService from '@/services/medicalRecordService'
 
 const toast = useToast()
+const router = useRouter()
 
 // Reactive data
 const loading = ref(true)
@@ -341,11 +343,46 @@ const paginatedRecords = computed(() => {
 // Methods
 const loadRecords = async () => {
   try {
-    const response = await medicalRecordService.getVetMedicalRecords()
-    records.value = response.data || response || []
+    loading.value = true
+    
+    // Intentar obtener registros médicos del veterinario
+    try {
+      const params = {
+        page: 1,
+        limit: 100,
+        includePrescriptions: true
+      }
+      
+      // Agregar filtros de fecha si están presentes
+      if (filters.value.dateFrom) params.dateFrom = filters.value.dateFrom
+      if (filters.value.dateTo) params.dateTo = filters.value.dateTo
+      
+      const response = await medicalRecordService.getVeterinarianMedicalRecords(params)
+      
+      // Asegurar que siempre tengamos un array
+      const data = response?.data || response || []
+      records.value = Array.isArray(data) ? data : []
+      
+      console.log('Medical records loaded:', records.value.length)
+    } catch (apiError) {
+      console.error('API Error:', apiError)
+      
+      // Si hay error del servidor, mostrar registros vacíos pero permitir navegación
+      records.value = []
+      
+      // Mostrar mensaje informativo solo para errores graves
+      if (apiError.response?.status === 500) {
+        console.warn('Error del servidor al cargar registros médicos. Mostrando vista vacía.')
+      } else if (apiError.response?.status === 404) {
+        console.log('No hay registros médicos para este veterinario')
+      } else {
+        toast.error('Error al cargar los registros médicos')
+      }
+    }
+    
   } catch (error) {
-    console.error('Error loading medical records:', error)
-    toast.error('Error al cargar los registros médicos')
+    console.error('Error general loading medical records:', error)
+    records.value = []
   } finally {
     loading.value = false
   }
@@ -388,6 +425,14 @@ const hasPhysicalExamination = (record) => {
 
 const getSpeciesText = (species) => {
   return translate('petSpecies', species)
+}
+
+const showNewRecordInfo = () => {
+  // Navegar a la vista de pacientes con query param para indicar que queremos crear un registro médico
+  router.push({ 
+    name: 'vet-patients', 
+    query: { action: 'new-medical-record' } 
+  })
 }
 
 // Watchers

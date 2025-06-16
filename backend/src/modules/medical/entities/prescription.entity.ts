@@ -38,7 +38,7 @@ export class Prescription {
   @Column({ name: 'medical_record_id' })
   medicalRecordId: number;
 
-  @Column()
+  @Column({ name: 'medication_name' })
   @IsNotEmpty()
   medication: string;
 
@@ -54,9 +54,10 @@ export class Prescription {
   @IsEnum(PrescriptionFrequency)
   frequency: PrescriptionFrequency;
 
-  @Column({ name: 'start_date', type: 'date' })
+  @Column({ name: 'start_date', type: 'date', nullable: true })
+  @IsOptional()
   @IsDateString()
-  startDate: Date;
+  startDate?: Date;
 
   @Column({ name: 'end_date', type: 'date', nullable: true })
   @IsOptional()

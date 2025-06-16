@@ -22,6 +22,9 @@ const VetAppointmentsView = () => import('../views/vet/AppointmentsView.vue')
 const VetScheduleView = () => import('../views/vet/ScheduleView.vue')
 const VetMedicalRecordsView = () => import('../views/vet/MedicalRecordsView.vue')
 
+// Importación directa para debugging
+import VetNewMedicalRecordView from '../views/vet/NewMedicalRecordView.vue'
+
 // Vistas Compartidas
 const ProfileView = () => import('../views/ProfileView.vue')
 const NotFoundView = () => import('../views/NotFoundView.vue')
@@ -151,7 +154,7 @@ const routes = [
   {
     path: '/vet/patients/:id/medical-record/new',
     name: 'vet-new-medical-record',
-    component: () => import('../views/vet/NewMedicalRecordView.vue'),
+    component: VetNewMedicalRecordView,
     meta: { requiresAuth: true, roles: ['VET'] },
     props: true
   },
@@ -212,15 +215,23 @@ const router = createRouter({
     } else {
       return { top: 0 }
     }
+  },
+  
+  // Configuración para forzar recarga completa cuando sea necesario
+  onRouterError: (error, to, from) => {
+    console.error('Router error:', error)
   }
 })
 
 // Guard de navegación global
 router.beforeEach((to, from, next) => {
+  console.log('Router navigation:', { from: from.path, to: to.path, params: to.params })
+  
   const authStore = useAuthStore()
   
   // Verificar si la ruta requiere autenticación
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    console.log('Authentication required, redirecting to login')
     next({
       name: 'login',
       query: { redirect: to.fullPath }
@@ -245,6 +256,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.roles && authStore.isAuthenticated) {
     const userRole = authStore.userRole
     if (!to.meta.roles.includes(userRole)) {
+      console.log('Role not authorized:', userRole, 'required:', to.meta.roles)
       // Redirigir al dashboard apropiado según el rol
       if (userRole === 'VET') {
         next({ name: 'vet-dashboard' })
@@ -257,6 +269,7 @@ router.beforeEach((to, from, next) => {
     }
   }
   
+  console.log('Navigation allowed to:', to.path)
   next()
 })
 

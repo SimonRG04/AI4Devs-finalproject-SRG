@@ -3,6 +3,25 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Header -->
       <div class="mb-8">
+        <!-- Mensaje informativo cuando venimos de crear registro médico -->
+        <div v-if="route.query.action === 'new-medical-record'" class="mb-4 bg-blue-50 border border-blue-200 rounded-md p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-blue-800">
+                Crear Nuevo Registro Médico
+              </h3>
+              <div class="mt-2 text-sm text-blue-700">
+                <p>Selecciona un paciente de la lista para crear un nuevo registro médico. Haz clic en el botón "Agregar registro médico" <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">📋</span> junto al paciente.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="flex justify-between items-center">
           <div>
             <h1 class="text-3xl font-bold text-gray-900">Pacientes</h1>
@@ -33,208 +52,241 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
             <InputText
-              v-model="filters.global.value"
+              v-model="searchQuery"
               placeholder="Buscar por nombre, raza, propietario..."
               class="w-full"
             />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Especie</label>
-            <Dropdown
+            <select
               v-model="selectedSpecies"
-              :options="speciesOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Todas las especies"
-              class="w-full"
-              showClear
-            />
+              class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Todas las especies</option>
+              <option v-for="species in speciesOptions" :key="species.value" :value="species.value">
+                {{ species.label }}
+              </option>
+            </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-            <Dropdown
+            <select
               v-model="selectedStatus"
-              :options="statusOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Todos los estados"
-              class="w-full"
-              showClear
-            />
+              class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Todos</option>
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+            </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Alertas Médicas</label>
-            <Dropdown
+            <select
               v-model="selectedAlert"
-              :options="alertOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Todas"
-              class="w-full"
-              showClear
-            />
+              class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Todas</option>
+              <option value="with">Con alertas</option>
+              <option value="without">Sin alertas</option>
+            </select>
           </div>
         </div>
       </div>
 
       <!-- Data Table -->
       <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-        <DataTable
-          v-model:filters="filters"
-          :value="patients"
-          :loading="loading"
-          :paginator="true"
-          :rows="20"
-          :rowsPerPageOptions="[10, 20, 50]"
-          :totalRecords="totalRecords"
-          :lazy="true"
-          @page="onPage"
-          @sort="onSort"
-          @filter="onFilter"
-          filterDisplay="row"
-          :globalFilterFields="['name', 'breed', 'client.user.first_name', 'client.user.last_name']"
-          responsiveLayout="scroll"
-          :scrollable="true"
-          scrollHeight="600px"
-          class="p-datatable-sm"
-        >
-          <template #empty>
-            <div class="text-center py-8">
-              <div class="mx-auto h-16 w-16 text-gray-400 mb-4">
-                <MagnifyingGlassIcon class="w-full h-full" />
-              </div>
-              <h3 class="text-lg font-medium text-gray-900 mb-2">No se encontraron pacientes</h3>
-              <p class="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+            <h3 class="text-lg font-medium text-gray-900">Lista de Pacientes</h3>
+            <div class="text-sm text-gray-500">
+              {{ filteredPatients.length }} paciente{{ filteredPatients.length !== 1 ? 's' : '' }} encontrado{{ filteredPatients.length !== 1 ? 's' : '' }}
             </div>
-          </template>
+          </div>
+        </div>
 
-          <template #loading>
-            <div class="flex justify-center items-center py-8">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-vet-600"></div>
-              <span class="ml-3 text-gray-600">Cargando pacientes...</span>
-            </div>
-          </template>
-
-          <!-- Pet Photo and Name -->
-          <Column field="name" header="Paciente" :sortable="true" style="min-width: 200px">
-            <template #body="{ data }">
-              <div class="flex items-center space-x-3">
-                <div class="flex-shrink-0">
-                  <img
-                    v-if="data.photoUrl || data.photo_url"
-                    :src="data.photoUrl || data.photo_url"
-                    :alt="data.name"
-                    class="h-10 w-10 rounded-full object-cover"
-                  />
-                  <div v-else class="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span class="text-gray-500 text-lg">🐾</span>
+        <!-- Table Content -->
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Paciente
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Propietario
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Edad/Sexo
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Peso
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Alertas
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-if="loading" class="animate-pulse">
+                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                  <div class="flex items-center justify-center">
+                    <div class="loading-spinner mr-2"></div>
+                    Cargando pacientes...
                   </div>
-                </div>
-                <div>
-                  <div class="text-sm font-medium text-gray-900">{{ data.name }}</div>
-                  <div class="text-sm text-gray-500">{{ getSpeciesText(data.species) }} • {{ data.breed }}</div>
-                </div>
-              </div>
-            </template>
-          </Column>
-
-          <!-- Owner -->
-          <Column field="client" header="Propietario" :sortable="false" style="min-width: 180px">
-            <template #body="{ data }">
-              <div v-if="data.client">
-                <div class="text-sm font-medium text-gray-900">
-                  {{ data.client.user.firstName || data.client.user.first_name }} {{ data.client.user.lastName || data.client.user.last_name }}
-                </div>
-                <div class="text-sm text-gray-500">{{ data.client.user.email }}</div>
-              </div>
-              <span v-else class="text-gray-400">Sin propietario</span>
-            </template>
-          </Column>
-
-          <!-- Age and Gender -->
-          <Column field="birthDate" header="Edad/Sexo" :sortable="true" style="min-width: 120px">
-            <template #body="{ data }">
-              <div>
-                <div class="text-sm font-medium text-gray-900">{{ calculateAge(data.birthDate || data.birth_date) }}</div>
-                <div class="text-sm text-gray-500">{{ getGenderText(data.gender) }}</div>
-              </div>
-            </template>
-          </Column>
-
-          <!-- Weight -->
-          <Column field="weight" header="Peso" :sortable="true" style="min-width: 100px">
-            <template #body="{ data }">
-              <span class="text-sm font-medium text-gray-900">{{ data.weight }} kg</span>
-            </template>
-          </Column>
-
-          <!-- Medical Alerts -->
-          <Column field="medicalAlerts" header="Alertas" :sortable="false" style="min-width: 150px">
-            <template #body="{ data }">
-              <div v-if="data.medicalAlerts || data.medical_alerts" class="flex items-center space-x-1">
-                <ExclamationTriangleIcon class="h-4 w-4 text-yellow-500" />
-                <Tooltip :value="data.medicalAlerts || data.medical_alerts">
-                  <span class="text-sm text-yellow-700 cursor-help truncate max-w-[100px]">
-                    {{ data.medicalAlerts || data.medical_alerts }}
+                </td>
+              </tr>
+              <tr v-else-if="paginatedPatients.length === 0">
+                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                  <div class="py-8">
+                    <div class="mx-auto h-16 w-16 text-gray-400 mb-4">
+                      <MagnifyingGlassIcon class="w-full h-full" />
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No se encontraron pacientes</h3>
+                    <p class="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+                  </div>
+                </td>
+              </tr>
+              <tr v-else v-for="patient in paginatedPatients" :key="patient.id" class="hover:bg-gray-50">
+                <!-- Paciente -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0">
+                      <img
+                        v-if="patient.photoUrl || patient.photo_url"
+                        :src="patient.photoUrl || patient.photo_url"
+                        :alt="patient.name"
+                        class="h-10 w-10 rounded-full object-cover"
+                      />
+                      <div v-else class="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
+                        <span class="text-gray-500 text-lg">🐾</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-gray-900">{{ patient.name }}</div>
+                      <div class="text-sm text-gray-500">{{ getSpeciesText(patient.species) }} • {{ patient.breed }}</div>
+                    </div>
+                  </div>
+                </td>
+                
+                <!-- Propietario -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div v-if="patient.client">
+                    <div class="text-sm font-medium text-gray-900">
+                      {{ patient.client.user.firstName || patient.client.user.first_name }} {{ patient.client.user.lastName || patient.client.user.last_name }}
+                    </div>
+                    <div class="text-sm text-gray-500">{{ patient.client.user.email }}</div>
+                  </div>
+                  <span v-else class="text-gray-400">Sin propietario</span>
+                </td>
+                
+                <!-- Edad/Sexo -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">{{ calculateAge(patient.birthDate || patient.birth_date) }}</div>
+                  <div class="text-sm text-gray-500">{{ getGenderText(patient.gender) }}</div>
+                </td>
+                
+                <!-- Peso -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="text-sm font-medium text-gray-900">{{ patient.weight }} kg</span>
+                </td>
+                
+                <!-- Alertas -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div v-if="patient.medicalAlerts || patient.medical_alerts" class="flex items-center space-x-1">
+                    <ExclamationTriangleIcon class="h-4 w-4 text-yellow-500" />
+                    <span class="text-sm text-yellow-700 truncate max-w-[100px]" :title="patient.medicalAlerts || patient.medical_alerts">
+                      {{ patient.medicalAlerts || patient.medical_alerts }}
+                    </span>
+                  </div>
+                  <span v-else class="text-sm text-gray-400">Sin alertas</span>
+                </td>
+                
+                <!-- Estado -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span
+                    :class="[
+                      'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                      patient.isActive !== false
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                    ]"
+                  >
+                    {{ patient.isActive !== false ? 'Activo' : 'Inactivo' }}
                   </span>
-                </Tooltip>
-              </div>
-              <span v-else class="text-sm text-gray-400">Sin alertas</span>
-            </template>
-          </Column>
+                </td>
+                
+                <!-- Acciones -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div class="flex space-x-2">
+                    <button
+                      @click="viewPatient(patient)"
+                      class="text-blue-600 hover:text-blue-900 p-2 rounded-full hover:bg-blue-50"
+                      title="Ver detalles"
+                    >
+                      👁️
+                    </button>
+                    <button
+                      @click="scheduleAppointment(patient)"
+                      class="text-green-600 hover:text-green-900 p-2 rounded-full hover:bg-green-50"
+                      title="Agendar cita"
+                    >
+                      📅
+                    </button>
+                    <button
+                      @click="addMedicalRecord(patient)"
+                      class="text-purple-600 hover:text-purple-900 p-2 rounded-full hover:bg-purple-50"
+                      title="Agregar registro médico"
+                    >
+                      📝
+                    </button>
+                    <button
+                      @click="viewHistory(patient)"
+                      class="text-gray-600 hover:text-gray-900 p-2 rounded-full hover:bg-gray-50"
+                      title="Ver historial"
+                    >
+                      📋
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-          <!-- Status -->
-          <Column field="isActive" header="Estado" :sortable="true" style="min-width: 100px">
-            <template #body="{ data }">
-              <Tag
-                :value="data.isActive !== false ? 'Activo' : 'Inactivo'"
-                :severity="data.isActive !== false ? 'success' : 'secondary'"
-              />
-            </template>
-          </Column>
-
-          <!-- Last Visit -->
-          <Column field="lastVisit" header="Última Visita" :sortable="false" style="min-width: 130px">
-            <template #body="{ data }">
-              <span v-if="data.lastVisit" class="text-sm text-gray-600">
-                {{ formatDate(data.lastVisit) }}
+        <!-- Paginación -->
+        <div v-if="totalPages > 1" class="px-6 py-3 border-t border-gray-200">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-700">
+              Mostrando {{ ((currentPage - 1) * pageSize) + 1 }} a {{ Math.min(currentPage * pageSize, filteredPatients.length) }} de {{ filteredPatients.length }} pacientes
+            </div>
+            <div class="flex space-x-2">
+              <button
+                @click="goToPage(currentPage - 1)"
+                :disabled="currentPage === 1"
+                class="px-3 py-1 text-sm border rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Anterior
+              </button>
+              <span class="px-3 py-1 text-sm">
+                Página {{ currentPage }} de {{ totalPages }}
               </span>
-              <span v-else class="text-sm text-gray-400">Sin visitas</span>
-            </template>
-          </Column>
-
-          <!-- Actions -->
-          <Column header="Acciones" :exportable="false" style="min-width: 150px">
-            <template #body="{ data }">
-              <div class="flex space-x-2">
-                <Button
-                  icon="pi pi-eye"
-                  class="p-button-rounded p-button-text p-button-sm"
-                  @click="viewPatient(data)"
-                  v-tooltip.top="'Ver detalles'"
-                />
-                <Button
-                  icon="pi pi-calendar-plus"
-                  class="p-button-rounded p-button-text p-button-sm"
-                  @click="scheduleAppointment(data)"
-                  v-tooltip.top="'Agendar cita'"
-                />
-                <Button
-                  icon="pi pi-file-edit"
-                  class="p-button-rounded p-button-text p-button-sm"
-                  @click="addMedicalRecord(data)"
-                  v-tooltip.top="'Agregar registro médico'"
-                />
-                <Button
-                  icon="pi pi-history"
-                  class="p-button-rounded p-button-text p-button-sm"
-                  @click="viewHistory(data)"
-                  v-tooltip.top="'Ver historial'"
-                />
-              </div>
-            </template>
-          </Column>
-        </DataTable>
+              <button
+                @click="goToPage(currentPage + 1)"
+                :disabled="currentPage === totalPages"
+                class="px-3 py-1 text-sm border rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Quick Stats -->
@@ -300,21 +352,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { format, differenceInYears, differenceInMonths, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { FilterMatchMode } from 'primevue/api'
 
-// PrimeVue Components
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
-import InputText from 'primevue/inputtext'
-import Dropdown from 'primevue/dropdown'
+// PrimeVue Components (solo Button que es estable)
 import Button from 'primevue/button'
-import Tag from 'primevue/tag'
-import Tooltip from 'primevue/tooltip'
 
 // Heroicons
 import { 
@@ -331,6 +376,7 @@ import petService from '@/services/petService'
 import appointmentService from '@/services/appointmentService'
 
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
 
 // Reactive data
@@ -341,95 +387,169 @@ const activePatients = ref(0)
 const patientsWithAlerts = ref(0)
 const todayAppointments = ref(0)
 
-// Filters
-const filters = ref({
-  global: { value: null, matchMode: FilterMatchMode.CONTAINS }
-})
+// Search and filters
+const searchQuery = ref('')
+const selectedSpecies = ref('')
+const selectedStatus = ref('all')
+const selectedAlert = ref('all')
 
-const selectedSpecies = ref(null)
-const selectedStatus = ref(null)
-const selectedAlert = ref(null)
+// Pagination
+const currentPage = ref(1)
+const pageSize = ref(20)
 
-// Options
+// Filter options
 const speciesOptions = ref([
   { label: 'Perro', value: 'DOG' },
   { label: 'Gato', value: 'CAT' },
   { label: 'Ave', value: 'BIRD' },
   { label: 'Conejo', value: 'RABBIT' },
   { label: 'Hámster', value: 'HAMSTER' },
+  { label: 'Cobaya', value: 'GUINEA_PIG' },
   { label: 'Pez', value: 'FISH' },
   { label: 'Reptil', value: 'REPTILE' },
   { label: 'Otro', value: 'OTHER' }
 ])
 
-const statusOptions = ref([
-  { label: 'Activo', value: true },
-  { label: 'Inactivo', value: false }
-])
+// Computed properties
+const filteredPatients = computed(() => {
+  let filtered = patients.value || []
 
-const alertOptions = ref([
-  { label: 'Con alertas', value: 'with' },
-  { label: 'Sin alertas', value: 'without' }
-])
+  // Filter by search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(patient => 
+      patient.name?.toLowerCase().includes(query) ||
+      patient.breed?.toLowerCase().includes(query) ||
+      patient.client?.user?.firstName?.toLowerCase().includes(query) ||
+      patient.client?.user?.lastName?.toLowerCase().includes(query) ||
+      patient.client?.user?.first_name?.toLowerCase().includes(query) ||
+      patient.client?.user?.last_name?.toLowerCase().includes(query) ||
+      patient.client?.user?.email?.toLowerCase().includes(query)
+    )
+  }
 
-// Pagination
-const lazyParams = ref({
-  first: 0,
-  rows: 20,
-  sortField: null,
-  sortOrder: null,
-  filters: filters.value
+  // Filter by species
+  if (selectedSpecies.value) {
+    filtered = filtered.filter(patient => patient.species === selectedSpecies.value)
+  }
+
+  // Filter by status
+  if (selectedStatus.value !== 'all') {
+    if (selectedStatus.value === 'active') {
+      filtered = filtered.filter(patient => patient.isActive !== false)
+    } else if (selectedStatus.value === 'inactive') {
+      filtered = filtered.filter(patient => patient.isActive === false)
+    }
+  }
+
+  // Filter by alerts
+  if (selectedAlert.value !== 'all') {
+    if (selectedAlert.value === 'with') {
+      filtered = filtered.filter(patient => patient.medicalAlerts || patient.medical_alerts)
+    } else if (selectedAlert.value === 'without') {
+      filtered = filtered.filter(patient => !patient.medicalAlerts && !patient.medical_alerts)
+    }
+  }
+
+  return filtered
 })
+
+const totalPages = computed(() => 
+  Math.ceil(filteredPatients.value.length / pageSize.value)
+)
+
+const paginatedPatients = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredPatients.value.slice(start, end)
+})
+
+// Watchers and timers for debouncing
+let loadPatientsTimer = null
+let paginationTimer = null
+let sortTimer = null
+let filterTimer = null
 
 // Methods
 const loadPatients = async () => {
   try {
     loading.value = true
-    const page = Math.floor(lazyParams.value.first / lazyParams.value.rows) + 1
-    const response = await petService.getAllPets(page, lazyParams.value.rows)
     
-    patients.value = response.data || response.pets || []
-    totalRecords.value = response.total || response.totalCount || 0
+    // Usar el método seguro que maneja errores de validación
+    const response = await petService.getPetsSafe({
+      page: 1,
+      limit: 100,
+      includeOwner: true
+    })
     
-    // Calculate stats
-    activePatients.value = patients.value.filter(p => p.isActive).length
-    patientsWithAlerts.value = patients.value.filter(p => p.medicalAlerts).length
+    const patientsData = response?.data || []
+    patients.value = Array.isArray(patientsData) ? patientsData : []
+    totalRecords.value = response?.total || patients.value.length
+    
+    // Calcular estadísticas reales basadas en los datos obtenidos
+    setTimeout(() => {
+      calculateRealStatistics()
+    }, 200)
     
   } catch (error) {
     console.error('Error loading patients:', error)
     toast.error('Error al cargar los pacientes')
+    patients.value = []
+    totalRecords.value = 0
+    resetStatistics()
   } finally {
     loading.value = false
   }
 }
 
-const loadTodayAppointments = async () => {
+// Función separada para calcular estadísticas reales
+const calculateRealStatistics = async () => {
+  // Evitar race conditions usando nextTick
+  await nextTick()
+  
   try {
-    const response = await appointmentService.getTodayAppointments()
-    todayAppointments.value = response.data?.length || 0
+    // Estadísticas de pacientes (con verificación de datos)
+    const allPatients = patients.value || []
+    activePatients.value = allPatients.filter(p => p && p.isActive !== false).length
+    patientsWithAlerts.value = allPatients.filter(p => p && (p.medical_alerts || p.medicalAlerts)).length
+    
+    // Citas de hoy usando el endpoint correcto del veterinario con timeouts
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 segundos timeout
+      
+      const todayResponse = await appointmentService.getMyVetTodayAppointments()
+      clearTimeout(timeoutId)
+      
+      const todayAppts = todayResponse?.data || todayResponse || []
+      todayAppointments.value = Array.isArray(todayAppts) ? todayAppts.length : 0
+    } catch (appointmentError) {
+      console.warn('No se pudieron cargar las citas de hoy:', appointmentError.message || appointmentError)
+      todayAppointments.value = 0
+    }
+    
   } catch (error) {
-    console.error('Error loading today appointments:', error)
+    console.error('Error calculating statistics:', error)
+    resetStatistics()
   }
 }
 
-const onPage = (event) => {
-  lazyParams.value = event
-  loadPatients()
+// Función para resetear estadísticas en caso de error
+const resetStatistics = () => {
+  activePatients.value = 0
+  patientsWithAlerts.value = 0
+  todayAppointments.value = 0
 }
 
-const onSort = (event) => {
-  lazyParams.value = event
-  loadPatients()
-}
-
-const onFilter = (event) => {
-  lazyParams.value.filters = event.filters
-  loadPatients()
+// Pagination methods
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
 }
 
 const refreshData = () => {
   loadPatients()
-  loadTodayAppointments()
 }
 
 const exportData = () => {
@@ -445,8 +565,25 @@ const scheduleAppointment = (patient) => {
   router.push(`/vet/appointments/new?petId=${patient.id}`)
 }
 
-const addMedicalRecord = (patient) => {
-  router.push(`/vet/patients/${patient.id}/medical-record/new`)
+const addMedicalRecord = async (patient) => {
+  try {
+    // Limpiar query parameters si existen
+    if (route.query.action) {
+      await router.replace({ name: 'vet-patients' })
+    }
+    
+    // Navegar al formulario de nuevo registro médico usando el path directo
+    await router.push(`/vet/patients/${patient.id}/medical-record/new`)
+    
+  } catch (error) {
+    console.error('Error navigating to medical record form:', error)
+    toast.error('Error al navegar al formulario de registro médico')
+    
+    // Intento de recuperación: forzar recarga de la página con la nueva URL
+    setTimeout(() => {
+      window.location.href = `/vet/patients/${patient.id}/medical-record/new`
+    }, 1000)
+  }
 }
 
 const viewHistory = (patient) => {
@@ -508,38 +645,50 @@ const getGenderText = (gender) => {
   }
 }
 
-// Watchers for filters
-watch([selectedSpecies, selectedStatus, selectedAlert], () => {
-  // Apply additional filters
-  loadPatients()
+// Reset page when filters change
+watch([searchQuery, selectedSpecies, selectedStatus, selectedAlert], () => {
+  currentPage.value = 1
 })
 
-// Lifecycle
-onMounted(() => {
-  loadPatients()
-  loadTodayAppointments()
+// Cleanup function para limpiar timers
+const cleanup = () => {
+  if (loadPatientsTimer) clearTimeout(loadPatientsTimer)
+  if (paginationTimer) clearTimeout(paginationTimer)
+  if (sortTimer) clearTimeout(sortTimer)
+  if (filterTimer) clearTimeout(filterTimer)
+}
+
+// Lifecycle - usando nextTick para evitar problemas con PrimeVue
+onMounted(async () => {
+  await nextTick()
+  
+  // Pequeño delay para asegurar que todos los componentes estén inicializados
+  setTimeout(() => {
+    loadPatients()
+  }, 100)
+})
+
+onUnmounted(() => {
+  cleanup()
 })
 </script>
 
 <style scoped>
-/* Custom DataTable styles */
-:deep(.p-datatable .p-datatable-thead > tr > th) {
-  background-color: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
-  font-weight: 600;
-  color: #374151;
+/* Custom styles */
+.loading-spinner {
+  @apply inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600;
 }
 
-:deep(.p-datatable .p-datatable-tbody > tr:hover) {
-  background-color: #f3f4f6;
+/* Hover states for action buttons */
+button:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
 }
 
-:deep(.p-button.p-button-text) {
-  color: #6b7280;
-}
-
-:deep(.p-button.p-button-text:hover) {
-  background-color: #f3f4f6;
-  color: #059669;
+/* Table responsive styles */
+@media (max-width: 768px) {
+  .table-container {
+    font-size: 0.875rem;
+  }
 }
 </style> 

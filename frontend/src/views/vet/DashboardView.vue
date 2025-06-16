@@ -331,22 +331,37 @@ const loadDashboardData = async () => {
     await Promise.all([
       loadTodayAppointments(),
       loadRecentPatients(),
-      loadStats()
+      loadStatsSecure()
     ])
   } catch (error) {
     console.error('Error loading dashboard data:', error)
-    toast.error('Error al cargar el dashboard')
+    // No mostrar toast aquí porque cada método maneja sus propios errores
   }
 }
 
 const loadTodayAppointments = async () => {
   try {
     loadingAppointments.value = true
-    const response = await appointmentService.getTodayAppointments()
-    todayAppointments.value = response.data || response || []
-    stats.value.todayAppointments = todayAppointments.value.length
+    
+    // Usar el endpoint específico del veterinario para obtener citas de hoy
+    const today = format(new Date(), 'yyyy-MM-dd')
+    const response = await veterinarianService.getVeterinarianAppointments(null, today)
+    
+    // Asegurar que siempre tengamos un array
+    const data = response?.data || response || []
+    todayAppointments.value = Array.isArray(data) ? data : []
+    
+    console.log('Today appointments loaded:', todayAppointments.value.length)
   } catch (error) {
     console.error('Error loading today appointments:', error)
+    
+    // No mostrar error si es 404 (sin datos) o 401 (sin permisos)
+    if (error.response?.status !== 404 && error.response?.status !== 401) {
+      toast.error('Error al cargar las citas de hoy')
+    }
+    
+    // Asegurar que siempre tengamos un array vacío
+    todayAppointments.value = []
   } finally {
     loadingAppointments.value = false
   }
@@ -355,35 +370,44 @@ const loadTodayAppointments = async () => {
 const loadRecentPatients = async () => {
   try {
     loadingPatients.value = true
-    const response = await petService.getAllPets(1, 10)
-    recentPatients.value = (response.data || response.pets || []).slice(0, 5)
+    const patients = await veterinarianService.getRecentPatients(5)
+    recentPatients.value = patients || []
   } catch (error) {
     console.error('Error loading recent patients:', error)
+    recentPatients.value = []
   } finally {
     loadingPatients.value = false
   }
 }
 
-const loadStats = async () => {
+const loadStatsSecure = async () => {
   try {
-    const [upcomingResponse, patientsResponse, statsResponse] = await Promise.all([
-      appointmentService.getUpcomingAppointments(10),
-      petService.getAllPets(1, 100),
-      veterinarianService.getVeterinarianStats()
-    ])
-
-    stats.value.upcomingAppointments = (upcomingResponse.data || upcomingResponse || []).length
+    // Usar directamente el endpoint de estadísticas reales del backend
+    const response = await veterinarianService.getMyStats()
+    const statsData = response?.data || response || {}
     
-    const patients = patientsResponse.data || patientsResponse.pets || []
-    stats.value.totalPatients = patients.length
-    stats.value.patientsWithAlerts = patients.filter(p => p.medical_alerts).length
-
-    // Merge with existing stats from API if available
-    if (statsResponse.data) {
-      stats.value = { ...stats.value, ...statsResponse.data }
+    // Actualizar las estadísticas con datos reales del backend
+    stats.value = {
+      todayAppointments: statsData.todayAppointments || 0,
+      upcomingAppointments: statsData.upcomingAppointments || 0,
+      totalPatients: statsData.totalPatients || 0,
+      patientsWithAlerts: statsData.patientsWithAlerts || 0,
+      monthlyAppointments: statsData.monthlyAppointments || 0,
+      completedAppointments: statsData.completedAppointments || 0
     }
+    
+    console.log('Real stats loaded from backend:', stats.value)
   } catch (error) {
-    console.error('Error loading stats:', error)
+    console.error('Error loading real stats:', error)
+    // Mantener valores por defecto en caso de error
+    stats.value = {
+      todayAppointments: 0,
+      upcomingAppointments: 0,
+      totalPatients: 0,
+      patientsWithAlerts: 0,
+      monthlyAppointments: 0,
+      completedAppointments: 0
+    }
   }
 }
 

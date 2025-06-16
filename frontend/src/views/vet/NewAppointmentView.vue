@@ -284,10 +284,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { format, addDays } from 'date-fns'
+
+// Store
+import { useAuthStore } from '@/stores/auth'
 
 // Heroicons
 import { 
@@ -302,9 +305,11 @@ import {
 // Services
 import appointmentService from '@/services/appointmentService'
 import petService from '@/services/petService'
+import veterinarianService from '@/services/veterinarianService'
 
 const router = useRouter()
 const toast = useToast()
+const authStore = useAuthStore()
 
 // Reactive data
 const patientSearch = ref('')
@@ -313,6 +318,7 @@ const selectedPatient = ref(null)
 const loadingSlots = ref(false)
 const submitting = ref(false)
 const availableSlots = ref([])
+const currentVeterinarian = ref(null)
 
 const appointmentForm = ref({
   date: '',
@@ -335,7 +341,41 @@ const maxDate = computed(() => {
   return format(addDays(new Date(), 90), 'yyyy-MM-dd')
 })
 
+// Watch for date changes
+watch(() => appointmentForm.value.date, (newDate) => {
+  if (newDate) {
+    appointmentForm.value.time = ''
+    loadAvailableSlots()
+  } else {
+    availableSlots.value = []
+  }
+})
+
 // Methods
+const loadCurrentVeterinarian = async () => {
+  try {
+    if (authStore.isVet && authStore.user) {
+      // Obtener el veterinario actual usando getProfile
+      const response = await veterinarianService.getProfile()
+      currentVeterinarian.value = response.data || response
+      console.log('Current veterinarian loaded:', currentVeterinarian.value)
+      
+      if (!currentVeterinarian.value || !currentVeterinarian.value.id) {
+        toast.error('No se pudo obtener la información del veterinario')
+        return
+      }
+    } else {
+      toast.error('Usuario no autenticado como veterinario')
+      return
+    }
+  } catch (error) {
+    console.error('Error loading current veterinarian:', error)
+    toast.error('Error al cargar información del veterinario')
+    // No usar fallback hardcodeado - dejar que el usuario maneje el error
+    currentVeterinarian.value = null
+  }
+}
+
 const searchPatients = async () => {
   if (patientSearch.value.length < 2) {
     searchResults.value = []
@@ -374,16 +414,39 @@ const onDateChange = () => {
 }
 
 const loadAvailableSlots = async () => {
+  if (!appointmentForm.value.date || !currentVeterinarian.value) return
+  
   try {
     loadingSlots.value = true
-    const response = await appointmentService.getAvailableSlots({
-      date: appointmentForm.value.date,
-      appointmentType: appointmentForm.value.type || 'CONSULTATION'
-    })
-    availableSlots.value = response.data || response
+    
+    const dateString = format(new Date(appointmentForm.value.date), 'yyyy-MM-dd')
+    
+    console.log('Loading slots for vet ID:', currentVeterinarian.value.id, 'date:', dateString)
+    
+    const response = await appointmentService.getVeterinarianAvailability(
+      currentVeterinarian.value.id, 
+      dateString, 
+      appointmentForm.value.duration || 30
+    )
+    
+    const responseData = response.data || response
+    console.log('Availability response:', responseData)
+    
+    if (responseData && responseData.slots) {
+      availableSlots.value = responseData.slots.map(slot => ({
+        time: slot.startTime,
+        available: slot.available,
+        dateTime: slot.dateTime,
+        reason: slot.reason
+      }))
+    } else {
+      availableSlots.value = []
+    }
+    
   } catch (error) {
     console.error('Error loading slots:', error)
     availableSlots.value = []
+    toast.error('Error al cargar horarios disponibles')
   } finally {
     loadingSlots.value = false
   }
@@ -399,6 +462,11 @@ const updateDuration = () => {
     'GROOMING': 45
   }
   appointmentForm.value.duration = durations[appointmentForm.value.type] || 30
+  
+  // Recargar slots si ya hay una fecha seleccionada
+  if (appointmentForm.value.date) {
+    loadAvailableSlots()
+  }
 }
 
 const handleSubmit = async () => {
@@ -407,11 +475,17 @@ const handleSubmit = async () => {
     return
   }
   
+  if (!currentVeterinarian.value) {
+    toast.error('Error: No se pudo identificar el veterinario')
+    return
+  }
+  
   try {
     submitting.value = true
     
     const appointmentData = {
       petId: selectedPatient.value.id,
+      veterinarianId: currentVeterinarian.value.id,
       scheduledAt: `${appointmentForm.value.date}T${appointmentForm.value.time}`,
       type: appointmentForm.value.type,
       duration: appointmentForm.value.duration,
@@ -421,6 +495,8 @@ const handleSubmit = async () => {
       sendConfirmation: appointmentForm.value.sendConfirmation,
       sendReminder: appointmentForm.value.sendReminder
     }
+    
+    console.log('Creating appointment with data:', appointmentData)
     
     await appointmentService.createAppointment(appointmentData)
     
@@ -434,4 +510,9 @@ const handleSubmit = async () => {
     submitting.value = false
   }
 }
+
+// Lifecycle
+onMounted(async () => {
+  await loadCurrentVeterinarian()
+})
 </script> 

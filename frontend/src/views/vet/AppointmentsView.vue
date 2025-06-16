@@ -233,7 +233,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onActivated } from 'vue'
 import { useToast } from 'vue-toastification'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -251,6 +251,7 @@ import {
 } from '@heroicons/vue/24/outline'
 
 // Services
+import veterinarianService from '@/services/veterinarianService'
 import appointmentService from '@/services/appointmentService'
 
 // Utils
@@ -277,7 +278,7 @@ const filteredAppointments = computed(() => {
 
   if (filters.value.date) {
     filtered = filtered.filter(appointment => 
-      appointment.dateTime.startsWith(filters.value.date)
+      (appointment.scheduledAt || appointment.dateTime || '').startsWith(filters.value.date)
     )
   }
 
@@ -296,7 +297,7 @@ const filteredAppointments = computed(() => {
     )
   }
 
-  return filtered.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+  return filtered.sort((a, b) => new Date(a.scheduledAt || a.dateTime) - new Date(b.scheduledAt || b.dateTime))
 })
 
 const totalPages = computed(() => 
@@ -312,11 +313,24 @@ const paginatedAppointments = computed(() => {
 // Methods
 const loadAppointments = async () => {
   try {
-    const response = await appointmentService.getVetAppointments()
-    appointments.value = response.data || response || []
+    loading.value = true
+    
+    // Usar el endpoint específico del veterinario
+    const response = await veterinarianService.getVeterinarianAppointments(
+      null, 
+      filters.value.date || null, 
+      filters.value.status || null
+    )
+    
+    // Asegurar que siempre tengamos un array
+    const data = response?.data || response || []
+    appointments.value = Array.isArray(data) ? data : []
+    
+    console.log('Vet appointments loaded:', appointments.value.length)
   } catch (error) {
     console.error('Error loading appointments:', error)
     toast.error('Error al cargar las citas')
+    appointments.value = []
   } finally {
     loading.value = false
   }
@@ -324,7 +338,7 @@ const loadAppointments = async () => {
 
 const confirmAppointment = async (appointment) => {
   try {
-    await appointmentService.updateAppointmentStatus(appointment.id, 'CONFIRMED')
+    await appointmentService.confirmAppointment(appointment.id)
     appointment.status = 'CONFIRMED'
     toast.success('Cita confirmada exitosamente')
   } catch (error) {
@@ -335,7 +349,7 @@ const confirmAppointment = async (appointment) => {
 
 const startAppointment = async (appointment) => {
   try {
-    await appointmentService.updateAppointmentStatus(appointment.id, 'IN_PROGRESS')
+    await appointmentService.updateAppointment(appointment.id, { status: 'IN_PROGRESS' })
     appointment.status = 'IN_PROGRESS'
     toast.success('Cita iniciada')
   } catch (error) {
@@ -346,7 +360,7 @@ const startAppointment = async (appointment) => {
 
 const completeAppointment = async (appointment) => {
   try {
-    await appointmentService.updateAppointmentStatus(appointment.id, 'COMPLETED')
+    await appointmentService.completeAppointment(appointment.id)
     appointment.status = 'COMPLETED'
     toast.success('Cita completada')
   } catch (error) {
@@ -358,7 +372,7 @@ const completeAppointment = async (appointment) => {
 const cancelAppointment = async (appointment) => {
   if (confirm('¿Estás seguro de que quieres cancelar esta cita?')) {
     try {
-      await appointmentService.updateAppointmentStatus(appointment.id, 'CANCELLED')
+      await appointmentService.cancelAppointment(appointment.id)
       appointment.status = 'CANCELLED'
       toast.success('Cita cancelada')
     } catch (error) {
@@ -403,10 +417,19 @@ const getAppointmentTypeText = (type) => {
 // Watchers
 watch(filters, () => {
   currentPage.value = 1
+  // Recargar appointments cuando cambien los filtros de backend
+  if (filters.value.status || filters.value.date) {
+    loadAppointments()
+  }
 }, { deep: true })
 
 // Lifecycle
 onMounted(() => {
+  loadAppointments()
+})
+
+onActivated(() => {
+  // Recargar citas cuando se regrese a esta vista
   loadAppointments()
 })
 </script>

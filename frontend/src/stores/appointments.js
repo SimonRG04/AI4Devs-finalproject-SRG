@@ -242,6 +242,62 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     }
   }
 
+  const confirmAppointment = async (id) => {
+    try {
+      loading.value = true
+      error.value = null
+      
+      const response = await appointmentService.confirmAppointment(id)
+      const confirmedAppointment = response.data || response
+      
+      // Actualizar en la lista
+      const index = appointments.value.findIndex(appointment => appointment.id === id)
+      if (index !== -1) {
+        appointments.value[index] = confirmedAppointment
+      }
+      
+      // Actualizar cita actual si es la misma
+      if (currentAppointment.value?.id === id) {
+        currentAppointment.value = confirmedAppointment
+      }
+      
+      return confirmedAppointment
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Error al confirmar cita'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const completeAppointment = async (id) => {
+    try {
+      loading.value = true
+      error.value = null
+      
+      const response = await appointmentService.completeAppointment(id)
+      const completedAppointment = response.data || response
+      
+      // Actualizar en la lista
+      const index = appointments.value.findIndex(appointment => appointment.id === id)
+      if (index !== -1) {
+        appointments.value[index] = completedAppointment
+      }
+      
+      // Actualizar cita actual si es la misma
+      if (currentAppointment.value?.id === id) {
+        currentAppointment.value = completedAppointment
+      }
+      
+      return completedAppointment
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Error al completar cita'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const setCurrentAppointment = (appointment) => {
     currentAppointment.value = appointment
   }
@@ -317,6 +373,8 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     bookAppointment,
     updateAppointment,
     cancelAppointment,
+    confirmAppointment,
+    completeAppointment,
     setCurrentAppointment,
     clearCurrentAppointment,
     setCalendarDate,

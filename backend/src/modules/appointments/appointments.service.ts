@@ -505,8 +505,18 @@ export class AppointmentsService {
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayName = dayNames[date.getDay()];
     
-    // Obtener configuración de horarios del veterinario
-    const availabilityHours = veterinarian.availabilityHours || {};
+    // Obtener configuración de horarios del veterinario con fallback a horarios por defecto
+    const defaultAvailabilityHours = {
+      "monday": {"start": "09:00", "end": "17:00", "isAvailable": true},
+      "tuesday": {"start": "09:00", "end": "17:00", "isAvailable": true},
+      "wednesday": {"start": "09:00", "end": "17:00", "isAvailable": true},
+      "thursday": {"start": "09:00", "end": "17:00", "isAvailable": true},
+      "friday": {"start": "09:00", "end": "17:00", "isAvailable": true},
+      "saturday": {"start": "09:00", "end": "13:00", "isAvailable": false},
+      "sunday": {"start": "09:00", "end": "13:00", "isAvailable": false}
+    };
+    
+    const availabilityHours = veterinarian.availabilityHours || defaultAvailabilityHours;
     const dayConfig = availabilityHours[dayName];
     
     // Si el día no está configurado o no está disponible, retornar array vacío

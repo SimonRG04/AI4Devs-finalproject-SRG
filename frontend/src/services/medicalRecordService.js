@@ -50,6 +50,24 @@ export const medicalRecordService = {
     const params = { query, ...filters }
     const response = await apiClient.get('/medical-records/search', { params })
     return response.data
+  },
+
+  // Obtener registros médicos del veterinario autenticado
+  async getVeterinarianMedicalRecords(filters = {}) {
+    try {
+      const params = {
+        page: filters.page || 1,
+        limit: filters.limit || 100,
+        includePrescriptions: filters.includePrescriptions || true,
+        ...filters
+      }
+      
+      const response = await apiClient.get('/medical-records', { params })
+      return response.data
+    } catch (error) {
+      console.error('Error getting veterinarian medical records:', error)
+      throw error
+    }
   }
 }
 

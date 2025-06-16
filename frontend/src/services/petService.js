@@ -15,11 +15,19 @@ const petService = {
 
   // Obtener todas las mascotas con paginación (para veterinarios)
   async getAllPets(page = 1, limit = 10, search = '') {
-    const params = { page, limit }
+    const params = { 
+      page: String(page), 
+      limit: String(limit)
+    }
     if (search) params.search = search
     
-    const response = await apiClient.get('/pets', { params })
-    return response.data
+    try {
+      const response = await apiClient.get('/pets', { params })
+      return response.data
+    } catch (error) {
+      console.error('Error getting all pets:', error)
+      return { data: [], total: 0, page: 1, totalPages: 1 }
+    }
   },
 
   // Obtener una mascota por ID
@@ -84,6 +92,43 @@ const petService = {
   async getMyPets() {
     const response = await apiClient.get('/pets/my-pets')
     return response.data
+  },
+
+  // Obtener mascotas de manera segura para veterinarios (evita errores de validación)
+  async getPetsSafe(searchOptions = {}) {
+    try {
+      // Construir parámetros como strings para evitar errores de validación
+      const params = {}
+      if (searchOptions.page) params.page = String(searchOptions.page || 1)
+      if (searchOptions.limit) params.limit = String(searchOptions.limit || 10)
+      if (searchOptions.search) params.search = searchOptions.search
+      if (searchOptions.includeOwner) params.includeOwner = 'true'
+      
+      const response = await apiClient.get('/pets', { params })
+      
+      // Manejar diferentes estructuras de respuesta
+      if (response?.data?.data) {
+        return {
+          data: response.data.data,
+          total: response.data.total || 0,
+          page: response.data.page || 1,
+          totalPages: response.data.totalPages || 1
+        }
+      } else if (response?.data) {
+        const data = Array.isArray(response.data) ? response.data : []
+        return {
+          data,
+          total: data.length,
+          page: 1,
+          totalPages: 1
+        }
+      }
+      
+      return { data: [], total: 0, page: 1, totalPages: 1 }
+    } catch (error) {
+      console.error('Error getting pets safely:', error)
+      return { data: [], total: 0, page: 1, totalPages: 1 }
+    }
   }
 }
 

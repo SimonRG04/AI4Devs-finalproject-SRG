@@ -1,8 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository, SelectQueryBuilder, Between, Not, In, MoreThan } from 'typeorm';
 import { Veterinarian } from '../users/entities/veterinarian.entity';
-import { Appointment } from '../appointments/entities/appointment.entity';
+import { Appointment, AppointmentStatus } from '../appointments/entities/appointment.entity';
 import { VeterinarianQueryDto } from './dto/veterinarian-query.dto';
 import { VeterinarianResponseDto } from './dto/veterinarian-response.dto';
 
@@ -21,6 +21,8 @@ export class VeterinariansService {
   constructor(
     @InjectRepository(Veterinarian)
     private readonly veterinarianRepository: Repository<Veterinarian>,
+    @InjectRepository(Appointment)
+    private readonly appointmentRepository: Repository<Appointment>,
   ) {}
 
   /**
@@ -205,15 +207,85 @@ export class VeterinariansService {
       throw new NotFoundException(`Veterinario para usuario ${userId} no encontrado`);
     }
 
-    // Aquí simularemos las estadísticas básicas
-    // En una implementación real, consultarías la base de datos para obtener estos datos
+    // Obtener fecha actual
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    
+    // Obtener inicio y fin del mes actual
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+
+    // Consultas paralelas para eficiencia
+    const [
+      todayAppointments,
+      upcomingAppointments,
+      monthlyAppointments,
+      completedAppointments,
+      totalPatients,
+      patientsWithAlerts
+    ] = await Promise.all([
+      // Citas de hoy
+      this.appointmentRepository.count({
+        where: {
+          veterinarianId: veterinarian.id,
+          scheduledAt: Between(startOfDay, endOfDay),
+          status: Not(In([AppointmentStatus.CANCELLED, AppointmentStatus.MISSED]))
+        }
+      }),
+      
+      // Citas futuras
+      this.appointmentRepository.count({
+        where: {
+          veterinarianId: veterinarian.id,
+          scheduledAt: MoreThan(new Date()),
+          status: In([AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED])
+        }
+      }),
+      
+      // Citas del mes actual
+      this.appointmentRepository.count({
+        where: {
+          veterinarianId: veterinarian.id,
+          scheduledAt: Between(startOfMonth, endOfMonth),
+          status: Not(In([AppointmentStatus.CANCELLED, AppointmentStatus.MISSED]))
+        }
+      }),
+      
+      // Citas completadas
+      this.appointmentRepository.count({
+        where: {
+          veterinarianId: veterinarian.id,
+          status: AppointmentStatus.COMPLETED
+        }
+      }),
+      
+      // Total de pacientes únicos (mascotas)
+      this.appointmentRepository
+        .createQueryBuilder('appointment')
+        .select('COUNT(DISTINCT appointment.petId)', 'count')
+        .where('appointment.veterinarianId = :veterinarianId', { veterinarianId: veterinarian.id })
+        .getRawOne()
+        .then(result => parseInt(result.count) || 0),
+      
+      // Pacientes con alertas médicas
+      this.appointmentRepository
+        .createQueryBuilder('appointment')
+        .leftJoin('appointment.pet', 'pet')
+        .select('COUNT(DISTINCT appointment.petId)', 'count')
+        .where('appointment.veterinarianId = :veterinarianId', { veterinarianId: veterinarian.id })
+        .andWhere('(pet.medicalAlerts IS NOT NULL AND pet.medicalAlerts != \'\')')
+        .getRawOne()
+        .then(result => parseInt(result.count) || 0)
+    ]);
+
     return {
-      todayAppointments: 0,
-      upcomingAppointments: 0,
-      totalPatients: 0,
-      patientsWithAlerts: 0,
-      monthlyAppointments: 0,
-      completedAppointments: 0
+      todayAppointments,
+      upcomingAppointments,
+      totalPatients,
+      patientsWithAlerts,
+      monthlyAppointments,
+      completedAppointments
     };
   }
 
@@ -232,15 +304,85 @@ export class VeterinariansService {
       throw new NotFoundException(`Veterinario con ID ${veterinarianId} no encontrado`);
     }
 
-    // Aquí simularemos las estadísticas básicas
-    // En una implementación real, consultarías la base de datos para obtener estos datos
+    // Obtener fecha actual
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    
+    // Obtener inicio y fin del mes actual
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+
+    // Consultas paralelas para eficiencia
+    const [
+      todayAppointments,
+      upcomingAppointments,
+      monthlyAppointments,
+      completedAppointments,
+      totalPatients,
+      patientsWithAlerts
+    ] = await Promise.all([
+      // Citas de hoy
+      this.appointmentRepository.count({
+        where: {
+          veterinarianId: veterinarianId,
+          scheduledAt: Between(startOfDay, endOfDay),
+          status: Not(In([AppointmentStatus.CANCELLED, AppointmentStatus.MISSED]))
+        }
+      }),
+      
+      // Citas futuras
+      this.appointmentRepository.count({
+        where: {
+          veterinarianId: veterinarianId,
+          scheduledAt: MoreThan(new Date()),
+          status: In([AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED])
+        }
+      }),
+      
+      // Citas del mes actual
+      this.appointmentRepository.count({
+        where: {
+          veterinarianId: veterinarianId,
+          scheduledAt: Between(startOfMonth, endOfMonth),
+          status: Not(In([AppointmentStatus.CANCELLED, AppointmentStatus.MISSED]))
+        }
+      }),
+      
+      // Citas completadas
+      this.appointmentRepository.count({
+        where: {
+          veterinarianId: veterinarianId,
+          status: AppointmentStatus.COMPLETED
+        }
+      }),
+      
+      // Total de pacientes únicos (mascotas)
+      this.appointmentRepository
+        .createQueryBuilder('appointment')
+        .select('COUNT(DISTINCT appointment.petId)', 'count')
+        .where('appointment.veterinarianId = :veterinarianId', { veterinarianId: veterinarianId })
+        .getRawOne()
+        .then(result => parseInt(result.count) || 0),
+      
+      // Pacientes con alertas médicas
+      this.appointmentRepository
+        .createQueryBuilder('appointment')
+        .leftJoin('appointment.pet', 'pet')
+        .select('COUNT(DISTINCT appointment.petId)', 'count')
+        .where('appointment.veterinarianId = :veterinarianId', { veterinarianId: veterinarianId })
+        .andWhere('(pet.medicalAlerts IS NOT NULL AND pet.medicalAlerts != \'\')')
+        .getRawOne()
+        .then(result => parseInt(result.count) || 0)
+    ]);
+
     return {
-      todayAppointments: 0,
-      upcomingAppointments: 0,
-      totalPatients: 0,
-      patientsWithAlerts: 0,
-      monthlyAppointments: 0,
-      completedAppointments: 0
+      todayAppointments,
+      upcomingAppointments,
+      totalPatients,
+      patientsWithAlerts,
+      monthlyAppointments,
+      completedAppointments
     };
   }
 
@@ -258,14 +400,35 @@ export class VeterinariansService {
       throw new NotFoundException(`Veterinario para usuario ${userId} no encontrado`);
     }
 
-    // Aquí retornaremos un array vacío por ahora
-    // En una implementación real, consultarías las citas del veterinario
+    const queryBuilder = this.appointmentRepository
+      .createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.pet', 'pet')
+      .leftJoinAndSelect('pet.client', 'client')
+      .leftJoinAndSelect('client.user', 'clientUser')
+      .leftJoinAndSelect('appointment.veterinarian', 'veterinarian')
+      .leftJoinAndSelect('veterinarian.user', 'vetUser')
+      .where('veterinarian.id = :veterinarianId', { veterinarianId: veterinarian.id });
+
+    // Aplicar filtros
+    if (filters.date) {
+      queryBuilder.andWhere('DATE(appointment.scheduledAt) = :date', { date: filters.date });
+    }
+
+    if (filters.status) {
+      queryBuilder.andWhere('appointment.status = :status', { status: filters.status });
+    }
+
+    // Ordenar por fecha
+    queryBuilder.orderBy('appointment.scheduledAt', 'ASC');
+
+    const appointments = await queryBuilder.getMany();
+
     return {
-      data: [],
-      total: 0,
+      data: appointments,
+      total: appointments.length,
       page: 1,
       limit: 20,
-      totalPages: 0
+      totalPages: Math.ceil(appointments.length / 20)
     };
   }
 
@@ -283,14 +446,35 @@ export class VeterinariansService {
       throw new NotFoundException(`Veterinario con ID ${veterinarianId} no encontrado`);
     }
 
-    // Aquí retornaremos un array vacío por ahora
-    // En una implementación real, consultarías las citas del veterinario
+    const queryBuilder = this.appointmentRepository
+      .createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.pet', 'pet')
+      .leftJoinAndSelect('pet.client', 'client')
+      .leftJoinAndSelect('client.user', 'clientUser')
+      .leftJoinAndSelect('appointment.veterinarian', 'veterinarian')
+      .leftJoinAndSelect('veterinarian.user', 'vetUser')
+      .where('veterinarian.id = :veterinarianId', { veterinarianId: veterinarianId });
+
+    // Aplicar filtros
+    if (filters.date) {
+      queryBuilder.andWhere('DATE(appointment.scheduledAt) = :date', { date: filters.date });
+    }
+
+    if (filters.status) {
+      queryBuilder.andWhere('appointment.status = :status', { status: filters.status });
+    }
+
+    // Ordenar por fecha
+    queryBuilder.orderBy('appointment.scheduledAt', 'ASC');
+
+    const appointments = await queryBuilder.getMany();
+
     return {
-      data: [],
-      total: 0,
+      data: appointments,
+      total: appointments.length,
       page: 1,
       limit: 20,
-      totalPages: 0
+      totalPages: Math.ceil(appointments.length / 20)
     };
   }
 
@@ -384,4 +568,4 @@ export class VeterinariansService {
       blockedDates: []
     };
   }
-} 
+}

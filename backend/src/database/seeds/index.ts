@@ -174,34 +174,129 @@ async function runSeeds() {
     });
     const savedPet4 = await petRepository.save(pet4);
 
-    // 4. Crear citas de ejemplo
+    // 4. Crear citas de ejemplo con datos más variados
     console.log('📅 Creando citas de ejemplo...');
     
-    // Cita futura - programada
-    const appointment1 = appointmentRepository.create({
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const lastMonth = new Date(today);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    
+    // Agregar alertas médicas a algunas mascotas
+    await petRepository.update(savedPet1.id, { 
+      medicalAlerts: 'Alergia a penicilina, sensibilidad gastrointestinal'
+    });
+    await petRepository.update(savedPet3.id, { 
+      medicalAlerts: 'Problemas respiratorios, requiere medicación especial'
+    });
+
+    // Cita de HOY - programada para Dr. García
+    const appointmentToday1 = appointmentRepository.create({
       petId: savedPet1.id,
       veterinarianId: veterinarian1.id,
-      scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días desde hoy
+      scheduledAt: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0, 0), // Hoy 10:00 AM
       type: AppointmentType.CONSULTATION,
       status: AppointmentStatus.SCHEDULED,
       duration: 30,
       priority: AppointmentPriority.NORMAL,
-      notes: 'Chequeo general y vacunación programada',
+      notes: 'Chequeo general de rutina - Cita de HOY',
     });
-    await appointmentRepository.save(appointment1);
+    await appointmentRepository.save(appointmentToday1);
 
-    // Cita futura - programada  
-    const appointment2 = appointmentRepository.create({
+    // Cita de HOY - confirmada para Dr. García  
+    const appointmentToday2 = appointmentRepository.create({
       petId: savedPet2.id,
-      veterinarianId: veterinarian2.id,
-      scheduledAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 días desde hoy
+      veterinarianId: veterinarian1.id,
+      scheduledAt: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 14, 30, 0), // Hoy 2:30 PM
+      type: AppointmentType.VACCINATION,
+      status: AppointmentStatus.CONFIRMED,
+      duration: 20,
+      priority: AppointmentPriority.NORMAL,
+      notes: 'Vacunación anual - Cita de HOY confirmada',
+    });
+    await appointmentRepository.save(appointmentToday2);
+
+    // Cita FUTURA - mañana para Dr. García
+    const appointmentTomorrow = appointmentRepository.create({
+      petId: savedPet3.id,
+      veterinarianId: veterinarian1.id,
+      scheduledAt: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 9, 0, 0), // Mañana 9:00 AM
       type: AppointmentType.CONSULTATION,
       status: AppointmentStatus.SCHEDULED,
       duration: 45,
-      priority: AppointmentPriority.NORMAL,
-      notes: 'Control dermatológico y revisión de alergias',
+      priority: AppointmentPriority.HIGH,
+      notes: 'Revisión problemas respiratorios - FUTURA',
     });
-    await appointmentRepository.save(appointment2);
+    await appointmentRepository.save(appointmentTomorrow);
+
+    // Cita FUTURA - próxima semana para Dr. García
+    const appointmentNextWeek = appointmentRepository.create({
+      petId: savedPet4.id,
+      veterinarianId: veterinarian1.id,
+      scheduledAt: new Date(nextWeek.getFullYear(), nextWeek.getMonth(), nextWeek.getDate(), 11, 0, 0), // Próxima semana
+      type: AppointmentType.CHECKUP,
+      status: AppointmentStatus.CONFIRMED,
+      duration: 30,
+      priority: AppointmentPriority.NORMAL,
+      notes: 'Control de peso y desarrollo - FUTURA',
+    });
+    await appointmentRepository.save(appointmentNextWeek);
+
+    // Cita COMPLETADA - ayer para Dr. García
+    const appointmentCompleted1 = appointmentRepository.create({
+      petId: savedPet1.id,
+      veterinarianId: veterinarian1.id,
+      scheduledAt: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 15, 0, 0), // Ayer
+      type: AppointmentType.CONSULTATION,
+      status: AppointmentStatus.COMPLETED,
+      duration: 40,
+      priority: AppointmentPriority.NORMAL,
+      notes: 'Consulta por digestión - COMPLETADA',
+    });
+    await appointmentRepository.save(appointmentCompleted1);
+
+    // Cita COMPLETADA - del mes pasado para Dr. García
+    const appointmentCompletedOld = appointmentRepository.create({
+      petId: savedPet2.id,
+      veterinarianId: veterinarian1.id,
+      scheduledAt: new Date(lastMonth.getFullYear(), lastMonth.getMonth(), lastMonth.getDate(), 16, 0, 0), // Mes pasado
+      type: AppointmentType.SURGERY,
+      status: AppointmentStatus.COMPLETED,
+      duration: 120,
+      priority: AppointmentPriority.HIGH,
+      notes: 'Cirugía menor - esterilización - COMPLETADA',
+    });
+    await appointmentRepository.save(appointmentCompletedOld);
+
+    // Citas para Dr. Rodríguez (segundo veterinario)
+    const appointmentRodriguezToday = appointmentRepository.create({
+      petId: savedPet3.id,
+      veterinarianId: veterinarian2.id,
+      scheduledAt: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 16, 0, 0), // Hoy 4:00 PM
+      type: AppointmentType.CONSULTATION,
+      status: AppointmentStatus.SCHEDULED,
+      duration: 30,
+      priority: AppointmentPriority.NORMAL,
+      notes: 'Evaluación dermatológica - Dr. Rodríguez HOY',
+    });
+    await appointmentRepository.save(appointmentRodriguezToday);
+
+    const appointmentRodriguezFuture = appointmentRepository.create({
+      petId: savedPet4.id,
+      veterinarianId: veterinarian2.id,
+      scheduledAt: new Date(nextWeek.getFullYear(), nextWeek.getMonth(), nextWeek.getDate(), 14, 0, 0), // Próxima semana
+      type: AppointmentType.CONSULTATION,
+      status: AppointmentStatus.CONFIRMED,
+      duration: 45,
+      priority: AppointmentPriority.NORMAL,
+      notes: 'Control dermatológico de seguimiento - Dr. Rodríguez FUTURA',
+    });
+    await appointmentRepository.save(appointmentRodriguezFuture);
 
     // 5. Crear usuario administrador
     console.log('👑 Creando usuario administrador...');
@@ -222,7 +317,7 @@ async function runSeeds() {
     console.log('• 2 veterinarios');
     console.log('• 3 clientes');
     console.log('• 4 mascotas');
-    console.log('• 2 citas');
+    console.log('• 6 citas');
     console.log('\n🔑 Credenciales de acceso:');
     console.log('Veterinarios:');
     console.log('  • dr.garcia@vetai.com / 123456');

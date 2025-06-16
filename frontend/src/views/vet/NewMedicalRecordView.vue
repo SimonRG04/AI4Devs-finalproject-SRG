@@ -54,7 +54,30 @@
 
     <!-- Loading State -->
     <div v-if="initialLoading" class="flex justify-center items-center py-12">
-      <div class="loading-spinner"></div>
+      <div class="flex flex-col items-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-vet-600 mb-4"></div>
+        <p class="text-gray-600">Cargando información del paciente...</p>
+        <p class="text-xs text-gray-400 mt-2">ID: {{ petId }}</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="!pet && !initialLoading" class="flex justify-center items-center py-12">
+      <div class="text-center">
+        <div class="mx-auto h-12 w-12 text-red-400 mb-4">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Error al cargar el paciente</h3>
+        <p class="text-gray-500 mb-4">No se pudo encontrar la información del paciente con ID: {{ petId }}</p>
+        <button
+          @click="router.push('/vet/patients')"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-vet-600 hover:bg-vet-700"
+        >
+          Volver a Pacientes
+        </button>
+      </div>
     </div>
 
     <!-- Main Content -->
@@ -518,16 +541,16 @@ const toast = useToast()
 const petsStore = usePetsStore()
 const medicalRecordsStore = useMedicalRecordsStore()
 
-// Props
+// Props - opcional, el id viene de la ruta
 const props = defineProps({
   id: {
     type: String,
-    required: true
+    required: false
   }
 })
 
-// State
-const petId = computed(() => props.id || route.params.id)
+// State - priorizar route params sobre props
+const petId = computed(() => route.params.id || props.id)
 const pet = ref(null)
 const initialLoading = ref(true)
 const loading = ref(false)
@@ -563,17 +586,39 @@ const minFollowUpDate = computed(() => {
 const loadPetData = async () => {
   try {
     initialLoading.value = true
-    const petData = await petsStore.fetchPet(petId.value)
+    
+    // Validar que tenemos un ID de mascota válido
+    if (!petId.value || isNaN(Number(petId.value))) {
+      throw new Error('ID de mascota inválido')
+    }
+    
+    const response = await petsStore.fetchPet(petId.value)
+    const petData = response.data || response
+    
+    if (!petData) {
+      throw new Error('Mascota no encontrada')
+    }
+    
     pet.value = petData
     
     // Set initial weight if available
     if (petData.weight) {
       form.weight = petData.weight
     }
+    
+    // Pre-cargar título sugerido basado en el tipo de visita
+    if (!form.title) {
+      form.title = `Consulta para ${petData.name}`
+    }
+    
   } catch (error) {
     console.error('Error loading pet data:', error)
-    toast.error('Error al cargar información del paciente')
-    router.push('/vet/patients')
+    toast.error(error.message || 'Error al cargar información del paciente')
+    
+    // Dar una pequeña pausa antes de redirigir para que el usuario vea el error
+    setTimeout(() => {
+      router.push('/vet/patients')
+    }, 2000)
   } finally {
     initialLoading.value = false
   }
@@ -652,23 +697,28 @@ const submitForm = async () => {
     loading.value = true
     
     const medicalRecordData = {
-      petId: petId.value,
+      petId: Number(petId.value),
       title: form.title,
-      visitType: form.visitType,
-      symptoms: form.symptoms,
-      physicalExam: form.physicalExam || null,
       diagnosis: form.diagnosis,
       treatment: form.treatment,
-      temperature: form.temperature,
-      weight: form.weight,
-      heartRate: form.heartRate,
-      respiratoryRate: form.respiratoryRate,
-      prognosis: form.prognosis || null,
-      followUpDate: form.followUpDate || null,
+      symptoms: form.symptoms || null,
+      temperature: form.temperature || null,
+      weight: form.weight || null,
       notes: form.notes || null,
-      prescriptions: form.prescriptions.filter(p => 
-        p.medicationName && p.dosage && p.frequency
-      )
+      followUpDate: form.followUpDate || null,
+      prescriptions: form.prescriptions
+        .filter(p => p.medicationName && p.dosage && p.frequency)
+        .map(p => ({
+          medication: p.medicationName, // Backend espera 'medication' no 'medicationName'
+          dosage: p.dosage,
+          frequency: p.frequency,
+          instructions: p.instructions || null,
+          startDate: new Date().toISOString().split('T')[0],
+          durationDays: parseInt(p.duration) || 7,
+          status: 'ACTIVE',
+          quantity: 1,
+          unit: 'comprimidos'
+        }))
     }
     
     const newRecord = await medicalRecordsStore.createMedicalRecord(medicalRecordData)
@@ -677,7 +727,13 @@ const submitForm = async () => {
     localStorage.removeItem(`medical-record-draft-${petId.value}`)
     
     toast.success('Registro médico creado exitosamente')
-    router.push(`/vet/patients/${petId.value}`)
+    
+    // Navegar de vuelta al detalle del paciente con un mensaje de éxito
+    router.push({
+      name: 'vet-patient-detail',
+      params: { id: petId.value },
+      query: { tab: 'medical-records', created: 'true' }
+    })
     
   } catch (error) {
     console.error('Error creating medical record:', error)
@@ -688,8 +744,15 @@ const submitForm = async () => {
 }
 
 // Lifecycle
-onMounted(() => {
-  loadPetData()
-  loadDraft()
+onMounted(async () => {
+  console.log('NewMedicalRecordView mounted with route params:', route.params)
+  console.log('Pet ID computed:', petId.value)
+  
+  try {
+    await loadPetData()
+    loadDraft()
+  } catch (error) {
+    console.error('Error in onMounted:', error)
+  }
 })
 </script> 

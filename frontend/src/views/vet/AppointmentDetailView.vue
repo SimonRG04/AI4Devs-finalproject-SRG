@@ -532,7 +532,7 @@ const loadAppointmentData = async () => {
     loading.value = true
     error.value = null
     
-    const appointmentData = await appointmentsStore.fetchAppointmentById(appointmentId.value)
+    const appointmentData = await appointmentsStore.fetchAppointment(appointmentId.value)
     appointment.value = appointmentData
     
     // Load recent medical records for the pet
@@ -622,7 +622,16 @@ const getSpeciesText = (species) => {
 
 const updateStatus = async (newStatus) => {
   try {
-    await appointmentsStore.updateAppointment(appointmentId.value, { status: newStatus })
+    if (newStatus === 'CONFIRMED') {
+      await appointmentsStore.confirmAppointment(appointmentId.value)
+    } else if (newStatus === 'COMPLETED') {
+      await appointmentsStore.completeAppointment(appointmentId.value)
+    } else if (newStatus === 'CANCELLED') {
+      await appointmentsStore.cancelAppointment(appointmentId.value)
+    } else {
+      await appointmentsStore.updateAppointment(appointmentId.value, { status: newStatus })
+    }
+    
     appointment.value.status = newStatus
     showActionsMenu.value = false
     toast.success('Estado de la cita actualizado')
