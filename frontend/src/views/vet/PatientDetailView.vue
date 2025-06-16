@@ -174,52 +174,77 @@
           </div>
 
           <!-- Appointments Tab -->
-          <div v-if="activeTab === 'appointments'" class="space-y-6">
-            <div v-if="appointments.length > 0">
-              <h3 class="text-lg font-medium text-gray-900 mb-4">Citas</h3>
-              <div class="space-y-4">
-                <div
-                  v-for="appointment in appointments"
-                  :key="appointment.id"
-                  class="bg-gray-50 rounded-lg p-4 border border-gray-200"
-                >
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                      <CalendarIcon class="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p class="text-sm font-medium text-gray-900">
-                          {{ formatDate(appointment.dateTime) }} - {{ formatTime(appointment.dateTime) }}
-                        </p>
-                        <p class="text-sm text-gray-500">{{ appointment.reason }}</p>
-                      </div>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                      <span 
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                        :class="getStatusBadgeClass(appointment.status)"
-                      >
-                        {{ getStatusLabel(appointment.status) }}
-                      </span>
-                      <button 
-                        @click="viewAppointment(appointment)" 
-                        class="text-primary-600 hover:text-primary-900 text-sm"
-                      >
-                        Ver
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div v-if="activeTab === 'appointments'" class="space-y-4">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium text-gray-900">Historial de Citas</h3>
+              <button
+                @click="showNewAppointmentModal = true"
+                class="bg-vet-600 text-white px-4 py-2 rounded-lg hover:bg-vet-700 transition-colors"
+              >
+                Nueva Cita
+              </button>
             </div>
-            <div v-else class="text-center py-12">
-              <CalendarIcon class="mx-auto h-12 w-12 text-gray-400" />
-              <h3 class="mt-2 text-sm font-medium text-gray-900">No hay citas programadas</h3>
-              <p class="mt-1 text-sm text-gray-500">Programa la primera cita para este paciente.</p>
-              <div class="mt-6">
-                <button @click="showAppointmentModal = true" class="btn-primary">
-                  <CalendarIcon class="h-4 w-4 mr-2" />
-                  Agendar Cita
-                </button>
+            
+            <div v-if="appointments.length === 0" class="text-center py-8 text-gray-500">
+              <CalendarIcon class="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <p>No hay citas registradas para esta mascota</p>
+            </div>
+            
+            <div v-else class="space-y-4">
+              <div
+                v-for="appointment in appointments"
+                :key="appointment.id"
+                class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
+                <div class="flex justify-between items-start mb-3">
+                  <div>
+                    <div class="flex items-center space-x-2 mb-2">
+                      <span 
+                        :class="[
+                          'px-2 py-1 rounded-full text-xs font-medium',
+                          getBadgeClass('appointmentStatus', appointment.status)
+                        ]"
+                      >
+                        {{ translate('appointmentStatus', appointment.status) }}
+                      </span>
+                      <span 
+                        v-if="appointment.priority && appointment.priority !== 'NORMAL'"
+                        :class="[
+                          'px-2 py-1 rounded-full text-xs font-medium',
+                          getBadgeClass('appointmentPriority', appointment.priority)
+                        ]"
+                      >
+                        {{ translate('appointmentPriority', appointment.priority) }}
+                      </span>
+                    </div>
+                    <h4 class="text-sm font-medium text-gray-900">
+                      {{ translate('appointmentType', appointment.type) }}
+                    </h4>
+                    <p class="text-sm text-gray-600">
+                      {{ formatDate(appointment.scheduledAt) }} a las {{ formatTime(appointment.scheduledAt) }}
+                    </p>
+                    <p v-if="appointment.veterinarian" class="text-sm text-gray-500">
+                      Dr. {{ appointment.veterinarian.user?.firstName || appointment.veterinarian.user?.first_name }} 
+                      {{ appointment.veterinarian.user?.lastName || appointment.veterinarian.user?.last_name }}
+                    </p>
+                  </div>
+                  <button class="text-vet-600 hover:text-vet-700">
+                    <EyeIcon class="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <div v-if="appointment.notes" class="mb-3">
+                  <p class="text-sm text-gray-700">{{ appointment.notes }}</p>
+                </div>
+                
+                <!-- Imágenes de la cita -->
+                <ImageGallery
+                  v-if="appointment.images && appointment.images.length > 0"
+                  :images="appointment.images"
+                  title="Imágenes de la cita"
+                  :max-visible="3"
+                  class="mt-3"
+                />
               </div>
             </div>
           </div>
@@ -328,12 +353,14 @@ import {
   ShieldCheckIcon,
   ExclamationTriangleIcon,
   DocumentTextIcon,
-  BeakerIcon
+  BeakerIcon,
+  EyeIcon
 } from '@heroicons/vue/24/outline'
 
 // Components
 import NewMedicalRecordModal from '../../components/modals/NewMedicalRecordModal.vue'
 import NewAppointmentModal from '../../components/modals/NewAppointmentModal.vue'
+import ImageGallery from '../../components/common/ImageGallery.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -359,6 +386,7 @@ const error = ref(null)
 const activeTab = ref('history')
 const showNewRecordModal = ref(false)
 const showAppointmentModal = ref(false)
+const showNewAppointmentModal = ref(false)
 const petNotes = ref('')
 const notesLoading = ref(false)
 
@@ -510,6 +538,44 @@ const saveNotes = async () => {
   } finally {
     notesLoading.value = false
   }
+}
+
+const getBadgeClass = (type, status) => {
+  const classes = {
+    'appointmentStatus': {
+      'SCHEDULED': 'bg-blue-100 text-blue-800',
+      'CONFIRMED': 'bg-green-100 text-green-800',
+      'IN_PROGRESS': 'bg-yellow-100 text-yellow-800',
+      'COMPLETED': 'bg-gray-100 text-gray-800',
+      'CANCELLED': 'bg-red-100 text-red-800'
+    },
+    'appointmentPriority': {
+      'NORMAL': 'bg-gray-100 text-gray-800',
+      'HIGH': 'bg-red-100 text-red-800',
+      'MEDIUM': 'bg-yellow-100 text-yellow-800',
+      'LOW': 'bg-green-100 text-green-800'
+    }
+  }
+  return classes[type][status] || 'bg-gray-100 text-gray-800'
+}
+
+const translate = (type, status) => {
+  const translations = {
+    'appointmentStatus': {
+      'SCHEDULED': 'Programada',
+      'CONFIRMED': 'Confirmada',
+      'IN_PROGRESS': 'En Progreso',
+      'COMPLETED': 'Completada',
+      'CANCELLED': 'Cancelada'
+    },
+    'appointmentPriority': {
+      'NORMAL': 'Normal',
+      'HIGH': 'Alta',
+      'MEDIUM': 'Media',
+      'LOW': 'Baja'
+    }
+  }
+  return translations[type][status] || status
 }
 
 // Lifecycle

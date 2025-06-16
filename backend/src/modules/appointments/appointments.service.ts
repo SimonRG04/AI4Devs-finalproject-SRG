@@ -181,12 +181,27 @@ export class AppointmentsService {
     }
 
     try {
-      const updateData = {
-        ...updateAppointmentDto,
-        scheduledAt: updateAppointmentDto.scheduledAt 
-          ? new Date(updateAppointmentDto.scheduledAt) 
-          : appointment.scheduledAt,
-      };
+      // Filtrar solo los campos que existen en la entidad Appointment
+      const allowedFields = [
+        'veterinarianId', 'scheduledAt', 'type', 'status', 'priority', 
+        'notes', 'duration', 'images'
+      ];
+      
+      const updateData: Partial<Appointment> = {};
+      
+      // Solo incluir campos permitidos y que estén presentes en el DTO
+      allowedFields.forEach(field => {
+        if (updateAppointmentDto.hasOwnProperty(field)) {
+          updateData[field] = updateAppointmentDto[field];
+        }
+      });
+      
+      // Manejar scheduledAt específicamente
+      if (updateAppointmentDto.scheduledAt) {
+        updateData.scheduledAt = new Date(updateAppointmentDto.scheduledAt);
+      }
+
+      console.log('Filtered update data:', updateData);
 
       await this.appointmentRepository.update(id, updateData);
       
@@ -431,9 +446,9 @@ export class AppointmentsService {
         statuses: [AppointmentStatus.CANCELLED, AppointmentStatus.MISSED] 
       })
       .andWhere(
-        '(appointment.scheduledAt <= :startTime AND appointment.scheduledAt + INTERVAL appointment.duration MINUTE > :startTime) OR ' +
-        '(appointment.scheduledAt < :endTime AND appointment.scheduledAt + INTERVAL appointment.duration MINUTE >= :endTime) OR ' +
-        '(appointment.scheduledAt >= :startTime AND appointment.scheduledAt < :endTime)',
+        `(appointment.scheduledAt <= :startTime AND appointment.scheduledAt + INTERVAL '1 minute' * appointment.duration > :startTime) OR ` +
+        `(appointment.scheduledAt < :endTime AND appointment.scheduledAt + INTERVAL '1 minute' * appointment.duration >= :endTime) OR ` +
+        `(appointment.scheduledAt >= :startTime AND appointment.scheduledAt < :endTime)`,
         { startTime: dateTime, endTime }
       )
       .getOne();

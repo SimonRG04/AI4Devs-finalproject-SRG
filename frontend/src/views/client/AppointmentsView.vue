@@ -283,6 +283,9 @@ import {
 // Services
 import appointmentService from '@/services/appointmentService'
 
+// Utils
+import { translate, getBadgeClass } from '@/utils/translations'
+
 const router = useRouter()
 const toast = useToast()
 
@@ -335,25 +338,11 @@ const formatTime = (dateString) => {
 }
 
 const getStatusColor = (status) => {
-  const colors = {
-    SCHEDULED: 'bg-blue-100 text-blue-800',
-    CONFIRMED: 'bg-green-100 text-green-800',
-    IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
-    COMPLETED: 'bg-gray-100 text-gray-800',
-    CANCELLED: 'bg-red-100 text-red-800'
-  }
-  return colors[status] || 'bg-gray-100 text-gray-800'
+  return getBadgeClass('appointmentStatus', status)
 }
 
 const getStatusText = (status) => {
-  const texts = {
-    SCHEDULED: 'Programada',
-    CONFIRMED: 'Confirmada',
-    IN_PROGRESS: 'En Progreso',
-    COMPLETED: 'Completada',
-    CANCELLED: 'Cancelada'
-  }
-  return texts[status] || status
+  return translate('appointmentStatus', status)
 }
 
 const canReschedule = (appointment) => {

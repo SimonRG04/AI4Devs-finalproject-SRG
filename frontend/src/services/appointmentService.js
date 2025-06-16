@@ -30,13 +30,13 @@ const appointmentService = {
 
   // Actualizar cita
   async updateAppointment(id, appointmentData) {
-    const response = await apiClient.put(`/appointments/${id}`, appointmentData)
+    const response = await apiClient.patch(`/appointments/${id}`, appointmentData)
     return response.data
   },
 
   // Cancelar cita
   async cancelAppointment(id, reason = '') {
-    const response = await apiClient.patch(`/appointments/${id}/cancel`, { reason })
+    const response = await apiClient.put(`/appointments/${id}/cancel`, { reason })
     return response.data
   },
 
@@ -95,6 +95,15 @@ const appointmentService = {
   // Obtener mis citas (para clientes)
   async getMyAppointments(params = {}) {
     const response = await apiClient.get('/appointments/my-appointments', { params })
+    return response.data
+  },
+
+  // Reprogramar cita (método específico)
+  async rescheduleAppointment(id, rescheduleData) {
+    const response = await apiClient.patch(`/appointments/${id}`, {
+      scheduledAt: rescheduleData.scheduled_at,
+      notes: rescheduleData.reason ? `Reprogramada: ${rescheduleData.reason}` : undefined
+    })
     return response.data
   }
 }

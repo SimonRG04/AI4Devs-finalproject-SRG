@@ -206,7 +206,7 @@ export class PetsService {
       .createQueryBuilder('pet')
       .leftJoin('pet.appointments', 'appointment')
       .where('pet.id = :id', { id })
-      .andWhere('appointment.dateTime > :now', { now: new Date() })
+      .andWhere('appointment.scheduledAt > :now', { now: new Date() })
       .andWhere('appointment.status IN (:...statuses)', { 
         statuses: ['SCHEDULED', 'CONFIRMED'] 
       })
@@ -267,18 +267,69 @@ export class PetsService {
 
     await this.validatePetAccess(pet, currentUser);
 
-    // Importar dinámicamente el repositorio de appointments para evitar dependencia circular
-    const { AppointmentsService } = await import('../appointments/appointments.service');
-    // En lugar de esto, vamos a hacer la consulta directamente
-    
-    // Por simplicidad, devolvemos una respuesta vacía por ahora
-    // Este método se puede mejorar más tarde para hacer una consulta real
+    // Usar una consulta directa para evitar dependencia circular
+    const queryBuilder = this.petRepository.manager
+      .createQueryBuilder()
+      .select([
+        'appointment.id as appointment_id',
+        'appointment.scheduled_at as scheduledAt',
+        'appointment.type as appointment_type',
+        'appointment.status as appointment_status',
+        'appointment.priority as appointment_priority',
+        'appointment.duration as appointment_duration',
+        'appointment.notes as appointment_notes',
+        'appointment.created_at as createdAt',
+        'appointment.updated_at as updatedAt',
+        'vet_user.first_name as vet_user_firstName',
+        'vet_user.last_name as vet_user_lastName',
+        'veterinarian.specialization as veterinarian_specialty',
+        'veterinarian.license_number as veterinarian_license'
+      ])
+      .from('appointments', 'appointment')
+      .leftJoin('veterinarians', 'veterinarian', 'veterinarian.id = appointment.veterinarian_id')
+      .leftJoin('users', 'vet_user', 'vet_user.id = veterinarian.user_id')
+      .where('appointment.pet_id = :petId', { petId })
+      .orderBy('appointment.scheduled_at', 'DESC')
+      .limit(query.limit)
+      .offset((query.page - 1) * query.limit);
+
+    const appointments = await queryBuilder.getRawMany();
+
+    // Contar el total de registros
+    const totalQuery = this.petRepository.manager
+      .createQueryBuilder()
+      .select('COUNT(*) as count')
+      .from('appointments', 'appointment')
+      .where('appointment.pet_id = :petId', { petId });
+
+    const totalResult = await totalQuery.getRawOne();
+    const total = parseInt(totalResult.count);
+
+    // Transformar los resultados
+    const transformedAppointments = appointments.map(apt => ({
+      id: apt.appointment_id,
+      scheduledAt: apt.scheduledAt,
+      type: apt.appointment_type,
+      status: apt.appointment_status,
+      priority: apt.appointment_priority,
+      duration: apt.appointment_duration,
+      notes: apt.appointment_notes,
+      createdAt: apt.createdAt,
+      updatedAt: apt.updatedAt,
+      veterinarian: {
+        firstName: apt.vet_user_firstName,
+        lastName: apt.vet_user_lastName,
+        specialty: apt.veterinarian_specialty,
+        license: apt.veterinarian_license
+      }
+    }));
+
     return {
-      data: [],
-      total: 0,
+      data: transformedAppointments,
+      total,
       page: query.page,
       limit: query.limit,
-      totalPages: 0,
+      totalPages: Math.ceil(total / query.limit),
     };
   }
 

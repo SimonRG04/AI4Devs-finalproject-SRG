@@ -20,14 +20,16 @@
             <h1 class="text-3xl font-bold text-gray-900">Detalle de Cita</h1>
             <p class="mt-2 text-gray-600">{{ appointment.reason }}</p>
           </div>
-          <span
-            :class="[
-              'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
-              getStatusColor(appointment.status)
-            ]"
-          >
-            {{ getStatusText(appointment.status) }}
-          </span>
+          <div>
+            <span
+              :class="[
+                'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                getStatusColor(appointment.status)
+              ]"
+            >
+              {{ getStatusText(appointment.status) }}
+            </span>
+          </div>
         </div>
 
         <!-- Appointment Info -->
@@ -59,11 +61,16 @@
 
               <!-- Appointment Details -->
               <div>
+                <h4 class="text-sm font-medium text-gray-900 mb-4">Tipo de Cita</h4>
+                <p class="text-sm text-gray-700">{{ translate('appointmentType', appointment.type) }}</p>
+              </div>
+
+              <div>
                 <h4 class="text-sm font-medium text-gray-900 mb-4">Detalles</h4>
                 <div class="space-y-3">
                   <div class="flex items-center">
                     <CalendarIcon class="h-5 w-5 text-gray-400 mr-3" />
-                    <span class="text-sm text-gray-900">{{ formatDateTime(appointment.dateTime) }}</span>
+                    <span class="text-sm text-gray-900">{{ formatDateTime(appointment.scheduledAt || appointment.dateTime) }}</span>
                   </div>
                   <div class="flex items-center">
                     <ClockIcon class="h-5 w-5 text-gray-400 mr-3" />
@@ -72,8 +79,13 @@
                   <div v-if="appointment.veterinarian" class="flex items-center">
                     <UserIcon class="h-5 w-5 text-gray-400 mr-3" />
                     <span class="text-sm text-gray-900">
-                      Dr. {{ appointment.veterinarian.user?.first_name }} {{ appointment.veterinarian.user?.last_name }}
+                      Dr. {{ appointment.veterinarian.user?.firstName || appointment.veterinarian.user?.first_name || appointment.veterinarian.firstName }} 
+                      {{ appointment.veterinarian.user?.lastName || appointment.veterinarian.user?.last_name || appointment.veterinarian.lastName }}
                     </span>
+                  </div>
+                  <div v-if="appointment.veterinarian?.specialty || appointment.veterinarian?.specialization" class="flex items-center">
+                    <UserIcon class="h-5 w-5 text-gray-400 mr-3" />
+                    <span class="text-sm text-gray-500">{{ appointment.veterinarian.specialty || appointment.veterinarian.specialization }}</span>
                   </div>
                 </div>
               </div>
@@ -192,6 +204,9 @@ import {
 // Services
 import appointmentService from '@/services/appointmentService'
 
+// Utils
+import { translate, getBadgeClass } from '@/utils/translations'
+
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
@@ -204,7 +219,7 @@ const appointment = ref(null)
 const loadAppointment = async () => {
   try {
     const appointmentId = parseInt(route.params.id)
-    const response = await appointmentService.getAppointmentById(appointmentId)
+    const response = await appointmentService.getAppointment(appointmentId)
     appointment.value = response.data || response
   } catch (error) {
     console.error('Error loading appointment:', error)
@@ -228,29 +243,16 @@ const cancelAppointment = async () => {
 }
 
 const formatDateTime = (dateTime) => {
+  if (!dateTime) return 'N/A'
   return format(parseISO(dateTime), 'dd MMMM yyyy \'a las\' HH:mm', { locale: es })
 }
 
 const getStatusColor = (status) => {
-  const colors = {
-    SCHEDULED: 'bg-blue-100 text-blue-800',
-    CONFIRMED: 'bg-green-100 text-green-800',
-    IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
-    COMPLETED: 'bg-gray-100 text-gray-800',
-    CANCELLED: 'bg-red-100 text-red-800'
-  }
-  return colors[status] || 'bg-gray-100 text-gray-800'
+  return getBadgeClass('appointmentStatus', status)
 }
 
 const getStatusText = (status) => {
-  const texts = {
-    SCHEDULED: 'Programada',
-    CONFIRMED: 'Confirmada',
-    IN_PROGRESS: 'En Progreso',
-    COMPLETED: 'Completada',
-    CANCELLED: 'Cancelada'
-  }
-  return texts[status] || status
+  return translate('appointmentStatus', status)
 }
 
 // Lifecycle

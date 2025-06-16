@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import appointmentService from '../services/appointmentService'
 import { format, isToday, isFuture, isPast, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
+import petService from '../services/petService'
 
 export const useAppointmentsStore = defineStore('appointments', () => {
   // Estado
@@ -135,6 +136,30 @@ export const useAppointmentsStore = defineStore('appointments', () => {
       return response
     } catch (err) {
       error.value = err.response?.data?.message || 'Error al cargar disponibilidad'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const fetchByPetId = async (petId, params = {}) => {
+    try {
+      loading.value = true
+      error.value = null
+      
+      const response = await petService.getPetAppointments(petId, params)
+      const petAppointments = response.data || response
+      
+      // Actualizar la lista de citas con las citas de la mascota
+      if (Array.isArray(petAppointments)) {
+        appointments.value = [...appointments.value, ...petAppointments.filter(apt => 
+          !appointments.value.some(existing => existing.id === apt.id)
+        )]
+      }
+      
+      return petAppointments
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Error al cargar citas de la mascota'
       throw err
     } finally {
       loading.value = false
@@ -288,6 +313,7 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     fetchAppointments,
     fetchAppointment,
     fetchAvailability,
+    fetchByPetId,
     bookAppointment,
     updateAppointment,
     cancelAppointment,

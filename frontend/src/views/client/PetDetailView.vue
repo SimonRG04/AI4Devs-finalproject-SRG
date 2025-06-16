@@ -42,8 +42,8 @@
               <div class="lg:col-span-1">
                 <div class="text-center">
                   <img
-                    v-if="pet.photo_url"
-                    :src="pet.photo_url"
+                    v-if="pet.photoUrl || pet.photo_url"
+                    :src="pet.photoUrl || pet.photo_url"
                     :alt="pet.name"
                     class="mx-auto h-48 w-48 rounded-full object-cover"
                   />
@@ -51,7 +51,7 @@
                     <span class="text-gray-500 text-6xl">🐾</span>
                   </div>
                   <h4 class="mt-4 text-xl font-medium text-gray-900">{{ pet.name }}</h4>
-                  <p class="text-gray-500">{{ pet.species }} • {{ pet.breed }}</p>
+                  <p class="text-gray-500">{{ translate('petSpecies', pet.species) }} • {{ pet.breed }}</p>
                 </div>
               </div>
 
@@ -60,7 +60,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h5 class="text-sm font-medium text-gray-500">Especie</h5>
-                    <p class="mt-1 text-sm text-gray-900">{{ pet.species }}</p>
+                    <p class="mt-1 text-sm text-gray-900">{{ translate('petSpecies', pet.species) }}</p>
                   </div>
                   <div>
                     <h5 class="text-sm font-medium text-gray-500">Raza</h5>
@@ -177,7 +177,7 @@
             >
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-sm font-medium text-gray-900">{{ appointment.type }}</p>
+                  <p class="text-sm font-medium text-gray-900">{{ translate('appointmentType', appointment.type) }}</p>
                   <p class="text-sm text-gray-500">{{ formatDate(appointment.scheduledAt) }}</p>
                 </div>
                 <span
@@ -189,6 +189,60 @@
                   {{ getStatusText(appointment.status) }}
                 </span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Appointments -->
+        <div v-if="appointments.length > 0" class="bg-white shadow rounded-lg mt-6">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-medium text-gray-900">Historial de Citas</h3>
+              <router-link
+                to="/client/appointments"
+                class="text-sm text-vet-600 hover:text-vet-700"
+              >
+                Ver todas
+              </router-link>
+            </div>
+          </div>
+          <div class="divide-y divide-gray-200">
+            <div
+              v-for="appointment in appointments"
+              :key="appointment.id"
+              class="border border-gray-200 rounded-lg p-4"
+            >
+              <div class="flex justify-between items-start mb-3">
+                <div>
+                  <h4 class="font-medium text-gray-900">{{ translate('appointmentType', appointment.type) }}</h4>
+                  <p class="text-sm text-gray-600">{{ formatDate(appointment.scheduledAt) }}</p>
+                  <p class="text-sm text-gray-500">
+                    Dr. {{ appointment.veterinarian?.user?.firstName || appointment.veterinarian?.user?.first_name }} 
+                    {{ appointment.veterinarian?.user?.lastName || appointment.veterinarian?.user?.last_name }}
+                  </p>
+                </div>
+                <span 
+                  :class="[
+                    'px-2 py-1 rounded-full text-xs font-medium',
+                    getStatusBadgeClass(appointment.status)
+                  ]"
+                >
+                  {{ getStatusLabel(appointment.status) }}
+                </span>
+              </div>
+              
+              <div v-if="appointment.notes" class="mb-3">
+                <p class="text-sm text-gray-700">{{ appointment.notes }}</p>
+              </div>
+              
+              <!-- Imágenes de la cita -->
+              <ImageGallery
+                v-if="appointment.images && appointment.images.length > 0"
+                :images="appointment.images"
+                title="Imágenes de la cita"
+                :max-visible="3"
+                class="mt-3"
+              />
             </div>
           </div>
         </div>
@@ -232,6 +286,13 @@ import {
 // Services
 import petService from '@/services/petService'
 
+// Utils
+import { translate, getBadgeClass } from '@/utils/translations'
+
+// Components
+import NewAppointmentModal from '../../components/modals/NewAppointmentModal.vue'
+import ImageGallery from '../../components/common/ImageGallery.vue'
+
 const route = useRoute()
 const toast = useToast()
 
@@ -239,20 +300,40 @@ const toast = useToast()
 const loading = ref(true)
 const pet = ref(null)
 const recentAppointments = ref([])
+const appointments = ref([])
 
 // Methods
 const loadPetDetails = async () => {
   try {
+    loading.value = true
     const petId = parseInt(route.params.id)
     
     // Load pet details and recent appointments in parallel
     const [petResponse, appointmentsResponse] = await Promise.all([
       petService.getPet(petId),
-      petService.getPetAppointments ? petService.getPetAppointments(petId) : Promise.resolve([])
+      petService.getPetAppointments(petId, { limit: 10 })
     ])
     
+    console.log('Pet response:', petResponse)
+    console.log('Appointments response:', appointmentsResponse)
+    
     pet.value = petResponse.data || petResponse
-    recentAppointments.value = appointmentsResponse.data || appointmentsResponse || []
+    
+    // Handle appointments response - check if it's paginated or direct array
+    const appointmentsData = appointmentsResponse.data || appointmentsResponse
+    if (Array.isArray(appointmentsData)) {
+      recentAppointments.value = appointmentsData
+      appointments.value = appointmentsData
+    } else if (appointmentsData.data && Array.isArray(appointmentsData.data)) {
+      recentAppointments.value = appointmentsData.data
+      appointments.value = appointmentsData.data
+    } else {
+      recentAppointments.value = []
+      appointments.value = []
+    }
+    
+    console.log('Final pet data:', pet.value)
+    console.log('Final appointments data:', appointments.value)
     
   } catch (error) {
     console.error('Error loading pet details:', error)
@@ -277,38 +358,28 @@ const calculateAge = (birthDate) => {
 }
 
 const getGenderText = (gender) => {
-  const texts = {
-    MALE: 'Macho',
-    FEMALE: 'Hembra',
-    UNKNOWN: 'No especificado'
-  }
-  return texts[gender] || gender
+  return translate('petGender', gender)
 }
 
 const formatDate = (dateTime) => {
+  if (!dateTime) return 'N/A'
   return format(parseISO(dateTime), 'dd MMM yyyy', { locale: es })
 }
 
 const getStatusColor = (status) => {
-  const colors = {
-    SCHEDULED: 'bg-blue-100 text-blue-800',
-    CONFIRMED: 'bg-green-100 text-green-800',
-    IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
-    COMPLETED: 'bg-gray-100 text-gray-800',
-    CANCELLED: 'bg-red-100 text-red-800'
-  }
-  return colors[status] || 'bg-gray-100 text-gray-800'
+  return getBadgeClass('appointmentStatus', status)
 }
 
 const getStatusText = (status) => {
-  const texts = {
-    SCHEDULED: 'Programada',
-    CONFIRMED: 'Confirmada',
-    IN_PROGRESS: 'En Progreso',
-    COMPLETED: 'Completada',
-    CANCELLED: 'Cancelada'
-  }
-  return texts[status] || status
+  return translate('appointmentStatus', status)
+}
+
+const getStatusBadgeClass = (status) => {
+  return getBadgeClass('appointmentStatus', status)
+}
+
+const getStatusLabel = (status) => {
+  return translate('appointmentStatus', status)
 }
 
 const sharePetInfo = () => {

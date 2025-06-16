@@ -46,10 +46,9 @@ export class AIDiagnosis {
   @Column({ name: 'appointment_id', nullable: true })
   appointmentId?: number;
 
-  @Column({ name: 'image_url' })
-  @IsNotEmpty()
-  @IsUrl()
-  imageUrl: string;
+  @Column({ name: 'image_url', nullable: true })
+  @IsUrl({}, { message: 'La URL de la imagen debe ser válida' })
+  imageUrl?: string;
 
   @Column({ type: 'jsonb', nullable: true })
   results?: DiagnosisResults;

@@ -120,4 +120,14 @@ export class CreateAppointmentDto {
   @IsBoolean({ message: 'El envío de recordatorio debe ser verdadero o falso' })
   @Type(() => Boolean)
   sendReminder?: boolean = true;
+
+  @ApiPropertyOptional({
+    description: 'URLs de imágenes adjuntas para la cita (para diagnóstico)',
+    example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsString({ each: true, message: 'Cada imagen debe ser una URL válida' })
+  @Transform(({ value }) => Array.isArray(value) ? value : [])
+  images?: string[];
 } 

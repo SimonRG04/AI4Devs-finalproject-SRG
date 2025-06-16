@@ -86,6 +86,9 @@ export class Appointment {
   @Column({ default: 30 })
   duration: number;
 
+  @Column({ type: 'jsonb', nullable: true, default: '[]' })
+  images?: string[];
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

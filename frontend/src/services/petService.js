@@ -36,7 +36,7 @@ const petService = {
 
   // Actualizar mascota
   async updatePet(id, petData) {
-    const response = await apiClient.put(`/pets/${id}`, petData)
+    const response = await apiClient.patch(`/pets/${id}`, petData)
     return response.data
   },
 
@@ -53,8 +53,13 @@ const petService = {
   },
 
   // Obtener citas de una mascota
-  async getPetAppointments(petId) {
-    const response = await apiClient.get(`/pets/${petId}/appointments`)
+  async getPetAppointments(petId, params = {}) {
+    const queryParams = {
+      page: params.page || 1,
+      limit: params.limit || 10,
+      ...params
+    }
+    const response = await apiClient.get(`/pets/${petId}/appointments`, { params: queryParams })
     return response.data
   },
 

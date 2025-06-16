@@ -353,16 +353,12 @@ const submitForm = async () => {
     
     const appointmentData = {
       petId: props.petId || form.petId,
-      dateTime: dateTime.toISOString(),
+      scheduledAt: dateTime.toISOString(),
       type: form.type,
-      reason: form.reason,
+      duration: estimatedDuration.value || 30,
       priority: form.priority,
-      notes: form.notes || null,
       status: 'SCHEDULED',
-      reminderSettings: {
-        email: form.emailReminder,
-        sms: form.smsReminder
-      }
+      notes: form.notes || null
     }
     
     const newAppointment = await appointmentsStore.createAppointment(appointmentData)
@@ -372,7 +368,7 @@ const submitForm = async () => {
     
   } catch (error) {
     console.error('Error creating appointment:', error)
-    toast.error(error.message || 'Error al agendar la cita')
+    toast.error(error.response?.data?.message || error.message || 'Error al agendar la cita')
   } finally {
     loading.value = false
   }

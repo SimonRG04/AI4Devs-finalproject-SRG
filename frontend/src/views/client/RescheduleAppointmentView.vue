@@ -51,7 +51,7 @@
               <div>
                 <p class="text-sm font-medium text-gray-900">Fecha y Hora</p>
                 <p class="text-sm text-gray-600">
-                  {{ formatDateTime(appointment.scheduled_at) }}
+                  {{ formatDateTime(appointment.scheduled_at || appointment.scheduledAt) }}
                 </p>
               </div>
             </div>
@@ -232,6 +232,9 @@ import {
 // Services
 import appointmentService from '@/services/appointmentService'
 
+// Utils
+import { translate, getBadgeClass } from '@/utils/translations'
+
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
@@ -261,8 +264,8 @@ const maxDate = computed(() => {
 })
 
 const isNearAppointment = computed(() => {
-  if (!appointment.value?.scheduled_at) return false
-  const appointmentDate = parseISO(appointment.value.scheduled_at)
+  if (!appointment.value?.scheduled_at && !appointment.value?.scheduledAt) return false
+  const appointmentDate = parseISO(appointment.value.scheduled_at || appointment.value.scheduledAt)
   const hoursUntil = differenceInHours(appointmentDate, new Date())
   return hoursUntil < 24 && hoursUntil > 0
 })
@@ -285,11 +288,35 @@ const loadAppointment = async () => {
 const loadAvailableSlots = async (date) => {
   try {
     loadingSlots.value = true
-    const response = await appointmentService.getAvailableSlots({
-      date,
-      appointmentType: appointment.value?.type || 'CONSULTATION'
-    })
-    availableSlots.value = response.data || response
+    
+    const veterinarianId = appointment.value?.veterinarianId || appointment.value?.veterinarian_id
+    
+    if (!veterinarianId) {
+      console.error('No veterinarianId found in appointment:', appointment.value)
+      availableSlots.value = []
+      return
+    }
+
+    console.log('Loading slots for vet:', veterinarianId, 'date:', date)
+    
+    const response = await appointmentService.getVeterinarianAvailability(
+      veterinarianId, 
+      date, 
+      appointment.value.duration || 30
+    )
+    
+    const responseData = response.data || response
+    console.log('Availability response:', responseData)
+    
+    if (responseData && responseData.slots) {
+      availableSlots.value = responseData.slots.map(slot => ({
+        time: slot.startTime,
+        available: slot.available
+      }))
+    } else {
+      availableSlots.value = []
+    }
+    
   } catch (err) {
     console.error('Error loading slots:', err)
     availableSlots.value = []
@@ -334,39 +361,15 @@ const formatDateTime = (dateTime) => {
 }
 
 const getAppointmentTypeLabel = (type) => {
-  const types = {
-    'CONSULTATION': 'Consulta General',
-    'VACCINATION': 'Vacunación',
-    'SURGERY': 'Cirugía',
-    'EMERGENCY': 'Emergencia',
-    'CHECKUP': 'Revisión',
-    'GROOMING': 'Peluquería'
-  }
-  return types[type] || type
+  return translate('appointmentType', type)
 }
 
 const getStatusLabel = (status) => {
-  const statuses = {
-    'SCHEDULED': 'Programada',
-    'CONFIRMED': 'Confirmada',
-    'IN_PROGRESS': 'En Progreso',
-    'COMPLETED': 'Completada',
-    'CANCELLED': 'Cancelada',
-    'NO_SHOW': 'No Asistió'
-  }
-  return statuses[status] || status
+  return translate('appointmentStatus', status)
 }
 
 const getStatusClass = (status) => {
-  const classes = {
-    'SCHEDULED': 'bg-blue-100 text-blue-800',
-    'CONFIRMED': 'bg-green-100 text-green-800',
-    'IN_PROGRESS': 'bg-yellow-100 text-yellow-800',
-    'COMPLETED': 'bg-gray-100 text-gray-800',
-    'CANCELLED': 'bg-red-100 text-red-800',
-    'NO_SHOW': 'bg-red-100 text-red-800'
-  }
-  return classes[status] || 'bg-gray-100 text-gray-800'
+  return getBadgeClass('appointmentStatus', status)
 }
 
 // Lifecycle
