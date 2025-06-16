@@ -98,8 +98,8 @@
                 <div class="flex items-center space-x-4">
                   <!-- Pet Photo -->
                   <img
-                    v-if="record.pet?.photo_url"
-                    :src="record.pet.photo_url"
+                    v-if="record.pet?.photoUrl || record.pet?.photo_url"
+                    :src="record.pet?.photoUrl || record.pet?.photo_url"
                     :alt="record.pet.name"
                     class="h-12 w-12 rounded-full object-cover"
                   />
@@ -114,14 +114,14 @@
                         {{ record.pet?.name }}
                       </h4>
                       <span class="text-sm text-gray-500">
-                        ({{ record.pet?.species }})
+                        ({{ getSpeciesText(record.pet?.species) }})
                       </span>
                     </div>
                     <p class="text-sm text-gray-600">
-                      {{ record.pet?.owner?.first_name }} {{ record.pet?.owner?.last_name }}
+                      {{ (record.pet?.owner?.firstName || record.pet?.owner?.first_name) }} {{ (record.pet?.owner?.lastName || record.pet?.owner?.last_name) }}
                     </p>
                     <p class="text-sm text-gray-900 font-medium mt-1">
-                      {{ record.chief_complaint || 'Consulta general' }}
+                      {{ record.symptoms || record.chief_complaint || 'Consulta general' }}
                     </p>
                     <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                       <div class="flex items-center">
@@ -151,13 +151,13 @@
                           <span class="text-gray-500">Temperatura:</span>
                           <span class="text-gray-900">{{ record.temperature }}°C</span>
                         </div>
-                        <div v-if="record.heart_rate" class="flex justify-between">
+                        <div v-if="record.heartRate || record.heart_rate" class="flex justify-between">
                           <span class="text-gray-500">Frecuencia cardíaca:</span>
-                          <span class="text-gray-900">{{ record.heart_rate }} bpm</span>
+                          <span class="text-gray-900">{{ record.heartRate || record.heart_rate }} bpm</span>
                         </div>
-                        <div v-if="record.respiratory_rate" class="flex justify-between">
+                        <div v-if="record.respiratoryRate || record.respiratory_rate" class="flex justify-between">
                           <span class="text-gray-500">Frecuencia respiratoria:</span>
-                          <span class="text-gray-900">{{ record.respiratory_rate }} rpm</span>
+                          <span class="text-gray-900">{{ record.respiratoryRate || record.respiratory_rate }} rpm</span>
                         </div>
                       </div>
                     </div>
@@ -166,9 +166,9 @@
                     <div>
                       <h5 class="text-sm font-medium text-gray-900 mb-2">Información Clínica</h5>
                       <div class="space-y-3 text-sm">
-                        <div v-if="record.history">
+                        <div v-if="record.physicalExam || record.history">
                           <span class="text-gray-500 block">Historia:</span>
-                          <span class="text-gray-900">{{ record.history }}</span>
+                          <span class="text-gray-900">{{ record.physicalExam || record.history }}</span>
                         </div>
                         <div v-if="record.diagnosis">
                           <span class="text-gray-500 block">Diagnóstico:</span>
@@ -183,11 +183,11 @@
                   </div>
 
                   <!-- Follow-up and Notes -->
-                  <div v-if="record.follow_up_date || record.notes" class="mt-4 pt-4 border-t border-gray-200">
-                    <div v-if="record.follow_up_date" class="mb-3">
+                  <div v-if="record.followUpDate || record.follow_up_date || record.notes" class="mt-4 pt-4 border-t border-gray-200">
+                    <div v-if="record.followUpDate || record.follow_up_date" class="mb-3">
                       <div class="flex items-center text-sm text-amber-600">
                         <CalendarIcon class="h-4 w-4 mr-1" />
-                        <span>Seguimiento programado: {{ formatDate(record.follow_up_date) }}</span>
+                        <span>Seguimiento programado: {{ formatDate(record.followUpDate || record.follow_up_date) }}</span>
                       </div>
                     </div>
                     <div v-if="record.notes">
@@ -265,6 +265,9 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
+
+// Utils
+import { translate } from '@/utils/translations'
 
 // Heroicons
 import { 
@@ -380,7 +383,11 @@ const formatDate = (date) => {
 }
 
 const hasPhysicalExamination = (record) => {
-  return record.weight || record.temperature || record.heart_rate || record.respiratory_rate
+  return record.weight || record.temperature || record.heartRate || record.respiratoryRate
+}
+
+const getSpeciesText = (species) => {
+  return translate('petSpecies', species)
 }
 
 // Watchers

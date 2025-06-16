@@ -99,7 +99,7 @@
                   </div>
                   <div>
                     <h3 class="text-lg font-semibold text-gray-900">
-                      {{ appointment.type || 'Consulta General' }}
+                      {{ getAppointmentTypeText(appointment.type) }}
                     </h3>
                     <p class="text-sm text-gray-600">
                       {{ formatDate(appointment.scheduledAt) }} a las {{ formatTime(appointment.scheduledAt) }}
@@ -343,6 +343,14 @@ const getStatusColor = (status) => {
 
 const getStatusText = (status) => {
   return translate('appointmentStatus', status)
+}
+
+const getAppointmentTypeText = (type) => {
+  return translate('appointmentType', type)
+}
+
+const getPriorityText = (priority) => {
+  return translate('appointmentPriority', priority)
 }
 
 const canReschedule = (appointment) => {

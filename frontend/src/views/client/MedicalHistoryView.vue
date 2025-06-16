@@ -25,8 +25,8 @@
         <div class="p-6">
           <div class="flex items-center space-x-4">
             <img
-              v-if="pet.photo_url"
-              :src="pet.photo_url"
+              v-if="pet.photoUrl"
+              :src="pet.photoUrl"
               :alt="pet.name"
               class="h-16 w-16 rounded-full object-cover"
             />
@@ -35,10 +35,10 @@
             </div>
             <div>
               <h3 class="text-lg font-medium text-gray-900">{{ pet.name }}</h3>
-              <p class="text-gray-500">{{ pet.species }} • {{ pet.breed }}</p>
-              <p class="text-sm text-gray-500">{{ calculateAge(pet.birth_date) }}</p>
+              <p class="text-gray-500">{{ getSpeciesText(pet.species) }} • {{ pet.breed }}</p>
+              <p class="text-sm text-gray-500">{{ calculateAge(pet.birthDate) }}</p>
             </div>
-            <div v-if="pet.medical_alerts" class="ml-auto">
+            <div v-if="pet.medicalAlerts" class="ml-auto">
               <div class="flex items-center text-yellow-600">
                 <ExclamationTriangleIcon class="h-5 w-5 mr-1" />
                 <span class="text-sm font-medium">Alertas Médicas</span>
@@ -96,14 +96,15 @@
                         <div class="flex items-center justify-between mb-3">
                           <div>
                             <h4 class="text-lg font-medium text-gray-900">
-                              {{ record.chief_complaint || 'Consulta Veterinaria' }}
+                              {{ record.title || record.chiefComplaint || 'Consulta Veterinaria' }}
                             </h4>
                             <p class="text-sm text-gray-500">
-                              Dr. {{ record.veterinarian?.user?.first_name }} {{ record.veterinarian?.user?.last_name }}
+                              Dr. {{ record.veterinarian?.user?.firstName || record.veterinarian?.user?.first_name }} 
+                              {{ record.veterinarian?.user?.lastName || record.veterinarian?.user?.last_name }}
                             </p>
                           </div>
                           <time class="text-sm text-gray-500">
-                            {{ formatDate(record.date) }}
+                            {{ formatDate(record.date || record.createdAt) }}
                           </time>
                         </div>
 
@@ -119,13 +120,13 @@
                               <span class="text-gray-500">Temperatura:</span>
                               <span class="ml-1 text-gray-900">{{ record.temperature }}°C</span>
                             </div>
-                            <div v-if="record.heart_rate">
+                            <div v-if="record.heartRate">
                               <span class="text-gray-500">FC:</span>
-                              <span class="ml-1 text-gray-900">{{ record.heart_rate }} bpm</span>
+                              <span class="ml-1 text-gray-900">{{ record.heartRate }} bpm</span>
                             </div>
-                            <div v-if="record.respiratory_rate">
+                            <div v-if="record.respiratoryRate">
                               <span class="text-gray-500">FR:</span>
-                              <span class="ml-1 text-gray-900">{{ record.respiratory_rate }} rpm</span>
+                              <span class="ml-1 text-gray-900">{{ record.respiratoryRate }} rpm</span>
                             </div>
                           </div>
                         </div>
@@ -149,10 +150,10 @@
                         </div>
 
                         <!-- Follow-up -->
-                        <div v-if="record.follow_up_date" class="mt-4 pt-3 border-t border-gray-200">
+                        <div v-if="record.followUpDate" class="mt-4 pt-3 border-t border-gray-200">
                           <div class="flex items-center text-sm text-amber-600">
                             <CalendarIcon class="h-4 w-4 mr-1" />
-                            <span>Seguimiento programado: {{ formatDate(record.follow_up_date) }}</span>
+                            <span>Seguimiento programado: {{ formatDate(record.followUpDate) }}</span>
                           </div>
                         </div>
 
@@ -272,7 +273,7 @@ const formatDate = (date) => {
 }
 
 const hasPhysicalExamination = (record) => {
-  return record.weight || record.temperature || record.heart_rate || record.respiratory_rate
+  return record.weight || record.temperature || record.heartRate || record.respiratoryRate
 }
 
 const exportMedicalHistory = () => {
@@ -294,6 +295,31 @@ const exportMedicalHistory = () => {
   URL.revokeObjectURL(url)
   
   toast.success('Historial médico exportado')
+}
+
+const getSpeciesText = (species) => {
+  switch (species) {
+    case 'DOG':
+      return 'Perro'
+    case 'CAT':
+      return 'Gato'
+    case 'BIRD':
+      return 'Ave'
+    case 'RABBIT':
+      return 'Conejo'
+    case 'HAMSTER':
+      return 'Hámster'
+    case 'GUINEA_PIG':
+      return 'Cobaya'
+    case 'FISH':
+      return 'Pez'
+    case 'REPTILE':
+      return 'Reptil'
+    case 'OTHER':
+      return 'Otro'
+    default:
+      return species || 'No especificado'
+  }
 }
 
 // Lifecycle

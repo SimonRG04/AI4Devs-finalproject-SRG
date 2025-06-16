@@ -121,8 +121,8 @@
               <div class="flex items-center space-x-3">
                 <div class="flex-shrink-0">
                   <img
-                    v-if="data.photo_url"
-                    :src="data.photo_url"
+                    v-if="data.photoUrl || data.photo_url"
+                    :src="data.photoUrl || data.photo_url"
                     :alt="data.name"
                     class="h-10 w-10 rounded-full object-cover"
                   />
@@ -132,7 +132,7 @@
                 </div>
                 <div>
                   <div class="text-sm font-medium text-gray-900">{{ data.name }}</div>
-                  <div class="text-sm text-gray-500">{{ data.species }} • {{ data.breed }}</div>
+                  <div class="text-sm text-gray-500">{{ getSpeciesText(data.species) }} • {{ data.breed }}</div>
                 </div>
               </div>
             </template>
@@ -143,7 +143,7 @@
             <template #body="{ data }">
               <div v-if="data.client">
                 <div class="text-sm font-medium text-gray-900">
-                  {{ data.client.user.first_name }} {{ data.client.user.last_name }}
+                  {{ data.client.user.firstName || data.client.user.first_name }} {{ data.client.user.lastName || data.client.user.last_name }}
                 </div>
                 <div class="text-sm text-gray-500">{{ data.client.user.email }}</div>
               </div>
@@ -152,11 +152,11 @@
           </Column>
 
           <!-- Age and Gender -->
-          <Column field="birth_date" header="Edad/Sexo" :sortable="true" style="min-width: 120px">
+          <Column field="birthDate" header="Edad/Sexo" :sortable="true" style="min-width: 120px">
             <template #body="{ data }">
               <div>
-                <div class="text-sm font-medium text-gray-900">{{ calculateAge(data.birth_date) }}</div>
-                <div class="text-sm text-gray-500">{{ data.gender === 'MALE' ? 'Macho' : 'Hembra' }}</div>
+                <div class="text-sm font-medium text-gray-900">{{ calculateAge(data.birthDate || data.birth_date) }}</div>
+                <div class="text-sm text-gray-500">{{ getGenderText(data.gender) }}</div>
               </div>
             </template>
           </Column>
@@ -169,13 +169,13 @@
           </Column>
 
           <!-- Medical Alerts -->
-          <Column field="medical_alerts" header="Alertas" :sortable="false" style="min-width: 150px">
+          <Column field="medicalAlerts" header="Alertas" :sortable="false" style="min-width: 150px">
             <template #body="{ data }">
-              <div v-if="data.medical_alerts" class="flex items-center space-x-1">
+              <div v-if="data.medicalAlerts || data.medical_alerts" class="flex items-center space-x-1">
                 <ExclamationTriangleIcon class="h-4 w-4 text-yellow-500" />
-                <Tooltip :value="data.medical_alerts">
+                <Tooltip :value="data.medicalAlerts || data.medical_alerts">
                   <span class="text-sm text-yellow-700 cursor-help truncate max-w-[100px]">
-                    {{ data.medical_alerts }}
+                    {{ data.medicalAlerts || data.medical_alerts }}
                   </span>
                 </Tooltip>
               </div>
@@ -184,20 +184,20 @@
           </Column>
 
           <!-- Status -->
-          <Column field="is_active" header="Estado" :sortable="true" style="min-width: 100px">
+          <Column field="isActive" header="Estado" :sortable="true" style="min-width: 100px">
             <template #body="{ data }">
               <Tag
-                :value="data.is_active ? 'Activo' : 'Inactivo'"
-                :severity="data.is_active ? 'success' : 'secondary'"
+                :value="data.isActive !== false ? 'Activo' : 'Inactivo'"
+                :severity="data.isActive !== false ? 'success' : 'secondary'"
               />
             </template>
           </Column>
 
           <!-- Last Visit -->
-          <Column field="last_visit" header="Última Visita" :sortable="false" style="min-width: 130px">
+          <Column field="lastVisit" header="Última Visita" :sortable="false" style="min-width: 130px">
             <template #body="{ data }">
-              <span v-if="data.last_visit" class="text-sm text-gray-600">
-                {{ formatDate(data.last_visit) }}
+              <span v-if="data.lastVisit" class="text-sm text-gray-600">
+                {{ formatDate(data.lastVisit) }}
               </span>
               <span v-else class="text-sm text-gray-400">Sin visitas</span>
             </template>
@@ -392,8 +392,8 @@ const loadPatients = async () => {
     totalRecords.value = response.total || response.totalCount || 0
     
     // Calculate stats
-    activePatients.value = patients.value.filter(p => p.is_active).length
-    patientsWithAlerts.value = patients.value.filter(p => p.medical_alerts).length
+    activePatients.value = patients.value.filter(p => p.isActive).length
+    patientsWithAlerts.value = patients.value.filter(p => p.medicalAlerts).length
     
   } catch (error) {
     console.error('Error loading patients:', error)
@@ -470,6 +470,42 @@ const calculateAge = (birthDate) => {
 const formatDate = (dateString) => {
   if (!dateString) return ''
   return format(parseISO(dateString), 'dd/MM/yyyy', { locale: es })
+}
+
+const getSpeciesText = (species) => {
+  switch (species) {
+    case 'DOG':
+      return 'Perro'
+    case 'CAT':
+      return 'Gato'
+    case 'BIRD':
+      return 'Ave'
+    case 'RABBIT':
+      return 'Conejo'
+    case 'HAMSTER':
+      return 'Hámster'
+    case 'GUINEA_PIG':
+      return 'Cobaya'
+    case 'FISH':
+      return 'Pez'
+    case 'REPTILE':
+      return 'Reptil'
+    case 'OTHER':
+      return 'Otro'
+    default:
+      return species || 'No especificado'
+  }
+}
+
+const getGenderText = (gender) => {
+  switch (gender) {
+    case 'MALE':
+      return 'Macho'
+    case 'FEMALE':
+      return 'Hembra'
+    default:
+      return 'No especificado'
+  }
 }
 
 // Watchers for filters

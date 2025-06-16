@@ -126,69 +126,55 @@
               </div>
 
               <!-- Empty State -->
-              <div v-else-if="todayAppointments.length === 0" class="text-center py-8">
+              <div v-else-if="todayAppointments.length === 0" class="text-center py-6">
                 <CalendarIcon class="mx-auto h-12 w-12 text-gray-400" />
-                <h3 class="mt-2 text-sm font-medium text-gray-900">No hay citas programadas</h3>
-                <p class="mt-1 text-sm text-gray-500">¡Perfecto día para ponerse al día!</p>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No hay citas para hoy</h3>
+                <p class="mt-1 text-sm text-gray-500">¡Perfecto momento para ponerse al día!</p>
               </div>
 
               <!-- Appointments List -->
-              <div v-else class="space-y-4">
+              <div v-else class="space-y-3">
+                <!-- No appointments message -->
+                <div v-if="todayAppointments.length === 0" class="text-center py-6">
+                  <CalendarIcon class="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 class="mt-2 text-sm font-medium text-gray-900">No hay citas para hoy</h3>
+                  <p class="mt-1 text-sm text-gray-500">¡Perfecto momento para ponerse al día!</p>
+                </div>
+
+                <!-- Appointments -->
                 <div
                   v-for="appointment in todayAppointments"
                   :key="appointment.id"
-                  class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
+                  @click="viewAppointment(appointment)"
+                  class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200"
                 >
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                      <div class="flex-shrink-0">
-                        <img
-                          v-if="appointment.pet?.photo_url"
-                          :src="appointment.pet.photo_url"
-                          :alt="appointment.pet.name"
-                          class="h-10 w-10 rounded-full object-cover"
-                        />
-                        <div v-else class="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          <span class="text-gray-500 text-lg">🐾</span>
-                        </div>
-                      </div>
-                      <div>
-                        <h4 class="text-sm font-medium text-gray-900">{{ appointment.pet?.name }}</h4>
-                        <p class="text-sm text-gray-500">
-                          {{ appointment.pet?.client?.user?.first_name }} {{ appointment.pet?.client?.user?.last_name }}
-                        </p>
-                        <p class="text-xs text-gray-400">{{ appointment.reason }}</p>
+                  <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0">
+                      <div class="h-8 w-8 bg-vet-100 rounded-full flex items-center justify-center">
+                        <ClockIcon class="h-4 w-4 text-vet-600" />
                       </div>
                     </div>
-                    <div class="flex items-center space-x-4">
-                      <div class="text-right">
-                        <p class="text-sm font-medium text-gray-900">{{ formatTime(appointment.dateTime) }}</p>
-                        <p class="text-xs text-gray-500">{{ appointment.durationMinutes }} min</p>
-                      </div>
-                      <span
-                        :class="[
-                          'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                          getStatusColor(appointment.status)
-                        ]"
-                      >
-                        {{ getStatusText(appointment.status) }}
-                      </span>
-                      <div class="flex space-x-2">
-                        <button
-                          @click="viewAppointment(appointment)"
-                          class="text-vet-600 hover:text-vet-700 text-sm font-medium"
-                        >
-                          Ver
-                        </button>
-                        <button
-                          v-if="appointment.status === 'SCHEDULED'"
-                          @click="confirmAppointment(appointment)"
-                          class="text-green-600 hover:text-green-700 text-sm font-medium"
-                        >
-                          Confirmar
-                        </button>
-                      </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm font-medium text-gray-900 truncate">
+                        {{ appointment.pet?.name || appointment.petName }}
+                      </p>
+                      <p class="text-xs text-gray-500 truncate">
+                        {{ formatTime(appointment.scheduledAt || appointment.scheduled_at) }} • 
+                        {{ getAppointmentTypeText(appointment.type) }}
+                      </p>
                     </div>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span :class="getStatusColor(appointment.status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                      {{ getStatusText(appointment.status) }}
+                    </span>
+                    <button
+                      v-if="appointment.status === 'SCHEDULED'"
+                      @click.stop="confirmAppointment(appointment)"
+                      class="text-vet-600 hover:text-vet-700 text-xs font-medium"
+                    >
+                      Confirmar
+                    </button>
                   </div>
                 </div>
               </div>
@@ -252,6 +238,16 @@
 
               <!-- Patients List -->
               <div v-else class="space-y-3">
+                <!-- No patients message -->
+                <div v-if="recentPatients.length === 0" class="text-center py-6">
+                  <div class="mx-auto h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center">
+                    <span class="text-gray-400 text-2xl">🐾</span>
+                  </div>
+                  <h3 class="mt-2 text-sm font-medium text-gray-900">No hay pacientes recientes</h3>
+                  <p class="mt-1 text-sm text-gray-500">Los pacientes aparecerán aquí una vez que tengas citas</p>
+                </div>
+
+                <!-- Patients -->
                 <div
                   v-for="patient in recentPatients"
                   :key="patient.id"
@@ -259,8 +255,8 @@
                   class="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer transition-colors duration-200"
                 >
                   <img
-                    v-if="patient.photo_url"
-                    :src="patient.photo_url"
+                    v-if="patient.photoUrl || patient.photo_url"
+                    :src="patient.photoUrl || patient.photo_url"
                     :alt="patient.name"
                     class="h-8 w-8 rounded-full object-cover"
                   />
@@ -269,9 +265,9 @@
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900 truncate">{{ patient.name }}</p>
-                    <p class="text-xs text-gray-500 truncate">{{ patient.species }} • {{ patient.breed }}</p>
+                    <p class="text-xs text-gray-500 truncate">{{ getSpeciesText(patient.species) }} • {{ patient.breed }}</p>
                   </div>
-                  <div v-if="patient.medical_alerts" class="flex-shrink-0">
+                  <div v-if="patient.medicalAlerts || patient.medical_alerts" class="flex-shrink-0">
                     <ExclamationTriangleIcon class="h-4 w-4 text-yellow-500" />
                   </div>
                 </div>
@@ -305,6 +301,9 @@ import {
 import appointmentService from '@/services/appointmentService'
 import petService from '@/services/petService'
 import veterinarianService from '@/services/veterinarianService'
+
+// Utils
+import { translate } from '@/utils/translations'
 
 const router = useRouter()
 const toast = useToast()
@@ -404,14 +403,15 @@ const getStatusColor = (status) => {
 }
 
 const getStatusText = (status) => {
-  const texts = {
-    SCHEDULED: 'Programada',
-    CONFIRMED: 'Confirmada',
-    IN_PROGRESS: 'En Progreso',
-    COMPLETED: 'Completada',
-    CANCELLED: 'Cancelada'
-  }
-  return texts[status] || status
+  return translate('appointmentStatus', status)
+}
+
+const getAppointmentTypeText = (type) => {
+  return translate('appointmentType', type)
+}
+
+const getSpeciesText = (species) => {
+  return translate('petSpecies', species)
 }
 
 const viewAppointment = (appointment) => {

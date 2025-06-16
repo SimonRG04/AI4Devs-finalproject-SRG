@@ -5,7 +5,7 @@
         <div class="flex">
           <!-- Logo -->
           <div class="flex-shrink-0 flex items-center">
-            <router-link to="/" class="flex items-center space-x-2">
+            <router-link :to="homeRoute" class="flex items-center space-x-2">
               <div class="w-8 h-8 bg-vet-600 rounded-lg flex items-center justify-center">
                 <span class="text-white font-bold text-lg">V</span>
               </div>
@@ -184,6 +184,19 @@ const authStore = useAuthStore()
 // Computed properties
 const user = computed(() => authStore.user)
 const userRole = computed(() => authStore.userRole)
+
+const homeRoute = computed(() => {
+  switch (userRole.value) {
+    case 'CLIENT':
+      return '/dashboard'
+    case 'VET':
+      return '/vet'
+    case 'ADMIN':
+      return '/admin'
+    default:
+      return '/'
+  }
+})
 
 const isCurrentRoute = (path) => {
   return route.path.startsWith(path)

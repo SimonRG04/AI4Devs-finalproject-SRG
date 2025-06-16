@@ -400,4 +400,45 @@ export class AppointmentsController {
   ): Promise<Appointment> {
     return this.appointmentsService.complete(id, user);
   }
+
+  @Get('upcoming')
+  @Roles(UserRole.CLIENT, UserRole.VET, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Obtener próximas citas',
+    description: 'Obtiene las próximas citas programadas con límite opcional',
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Número máximo de citas a devolver',
+    example: 5,
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Próximas citas obtenidas exitosamente',
+    type: [AppointmentResponseDto],
+  })
+  async getUpcomingAppointments(
+    @CurrentUser() user: any,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+  ) {
+    return this.appointmentsService.getUpcomingAppointments(user, limit || 5);
+  }
+
+  @Get('today')
+  @Roles(UserRole.VET, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Obtener citas del día actual',
+    description: 'Obtiene todas las citas programadas para el día actual del veterinario',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Citas del día obtenidas exitosamente',
+    type: [AppointmentResponseDto],
+  })
+  async getTodayAppointments(
+    @CurrentUser() user: any,
+  ) {
+    return this.appointmentsService.getTodayAppointments(user);
+  }
 } 

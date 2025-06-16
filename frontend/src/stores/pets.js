@@ -189,6 +189,7 @@ export const usePetsStore = defineStore('pets', () => {
     // Acciones
     fetchPets,
     fetchPet,
+    fetchPetById: fetchPet,
     createPet,
     updatePet,
     deletePet,

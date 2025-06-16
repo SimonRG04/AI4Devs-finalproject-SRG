@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Veterinarian } from '../users/entities/veterinarian.entity';
+import { Appointment } from '../appointments/entities/appointment.entity';
 import { VeterinarianQueryDto } from './dto/veterinarian-query.dto';
 import { VeterinarianResponseDto } from './dto/veterinarian-response.dto';
 
@@ -140,6 +141,247 @@ export class VeterinariansService {
         email: veterinarian.user.email,
         phone: veterinarian.user.phoneNumber || '',
       },
+    };
+  }
+
+  /**
+   * Obtener veterinario por ID de usuario
+   */
+  async findByUserId(userId: number): Promise<VeterinarianResponseDto> {
+    this.logger.log(`Finding veterinarian by user ID: ${userId}`);
+
+    const veterinarian = await this.veterinarianRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(`Veterinario para usuario ${userId} no encontrado`);
+    }
+
+    return this.mapToResponseDto(veterinarian);
+  }
+
+  /**
+   * Actualizar perfil del veterinario
+   */
+  async updateProfile(userId: number, updateData: any): Promise<VeterinarianResponseDto> {
+    this.logger.log(`Updating veterinarian profile for user ID: ${userId}`);
+
+    const veterinarian = await this.veterinarianRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(`Veterinario para usuario ${userId} no encontrado`);
+    }
+
+    // Actualizar campos del veterinario
+    if (updateData.specialization) {
+      veterinarian.specialization = updateData.specialization;
+    }
+    if (updateData.availabilityHours) {
+      veterinarian.availabilityHours = updateData.availabilityHours;
+    }
+
+    await this.veterinarianRepository.save(veterinarian);
+
+    return this.mapToResponseDto(veterinarian);
+  }
+
+  /**
+   * Obtener estadísticas del veterinario por user ID (para veterinario autenticado)
+   */
+  async getMyStats(userId: number): Promise<any> {
+    this.logger.log(`Getting my stats for user ID: ${userId}`);
+
+    const veterinarian = await this.veterinarianRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(`Veterinario para usuario ${userId} no encontrado`);
+    }
+
+    // Aquí simularemos las estadísticas básicas
+    // En una implementación real, consultarías la base de datos para obtener estos datos
+    return {
+      todayAppointments: 0,
+      upcomingAppointments: 0,
+      totalPatients: 0,
+      patientsWithAlerts: 0,
+      monthlyAppointments: 0,
+      completedAppointments: 0
+    };
+  }
+
+  /**
+   * Obtener estadísticas del veterinario por veterinarian ID
+   */
+  async getVeterinarianStats(veterinarianId: number): Promise<any> {
+    this.logger.log(`Getting stats for veterinarian ID: ${veterinarianId}`);
+
+    const veterinarian = await this.veterinarianRepository.findOne({
+      where: { id: veterinarianId },
+      relations: ['user'],
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(`Veterinario con ID ${veterinarianId} no encontrado`);
+    }
+
+    // Aquí simularemos las estadísticas básicas
+    // En una implementación real, consultarías la base de datos para obtener estos datos
+    return {
+      todayAppointments: 0,
+      upcomingAppointments: 0,
+      totalPatients: 0,
+      patientsWithAlerts: 0,
+      monthlyAppointments: 0,
+      completedAppointments: 0
+    };
+  }
+
+  /**
+   * Obtener citas del veterinario autenticado por user ID
+   */
+  async getMyAppointments(userId: number, filters: { date?: string; status?: string } = {}): Promise<any> {
+    this.logger.log(`Getting my appointments for user ID: ${userId} with filters: ${JSON.stringify(filters)}`);
+
+    const veterinarian = await this.veterinarianRepository.findOne({
+      where: { user: { id: userId } },
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(`Veterinario para usuario ${userId} no encontrado`);
+    }
+
+    // Aquí retornaremos un array vacío por ahora
+    // En una implementación real, consultarías las citas del veterinario
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 0
+    };
+  }
+
+  /**
+   * Obtener citas del veterinario por veterinarian ID
+   */
+  async getVeterinarianAppointments(veterinarianId: number, filters: { date?: string; status?: string } = {}): Promise<any> {
+    this.logger.log(`Getting appointments for veterinarian ID: ${veterinarianId} with filters: ${JSON.stringify(filters)}`);
+
+    const veterinarian = await this.veterinarianRepository.findOne({
+      where: { id: veterinarianId },
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(`Veterinario con ID ${veterinarianId} no encontrado`);
+    }
+
+    // Aquí retornaremos un array vacío por ahora
+    // En una implementación real, consultarías las citas del veterinario
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 0
+    };
+  }
+
+  /**
+   * Obtener especialidades disponibles
+   */
+  async getSpecialties(): Promise<string[]> {
+    this.logger.log('Getting available specialties');
+
+    const specialties = await this.veterinarianRepository
+      .createQueryBuilder('veterinarian')
+      .select('DISTINCT veterinarian.specialization', 'specialization')
+      .where('veterinarian.specialization IS NOT NULL')
+      .andWhere('veterinarian.specialization != \'\'')
+      .getRawMany();
+
+    return specialties.map(s => s.specialization).filter(Boolean);
+  }
+
+  /**
+   * Obtener horarios del veterinario autenticado
+   */
+  async getMySchedule(userId: number, filters: { date?: string } = {}): Promise<any> {
+    this.logger.log(`Getting my schedule for user ID: ${userId} with filters: ${JSON.stringify(filters)}`);
+
+    const veterinarian = await this.veterinarianRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(`Veterinario para usuario ${userId} no encontrado`);
+    }
+
+    // Retornar horarios simulados
+    // En una implementación real, tendrías una entidad Schedule relacionada
+    return {
+      availabilityHours: veterinarian.availabilityHours || {},
+      schedule: [],
+      blockedDates: []
+    };
+  }
+
+  /**
+   * Actualizar horarios del veterinario autenticado
+   */
+  async updateMySchedule(userId: number, scheduleData: any): Promise<any> {
+    this.logger.log(`Updating my schedule for user ID: ${userId}`);
+
+    const veterinarian = await this.veterinarianRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(`Veterinario para usuario ${userId} no encontrado`);
+    }
+
+    // Actualizar horarios básicos
+    if (scheduleData.availabilityHours) {
+      veterinarian.availabilityHours = scheduleData.availabilityHours;
+      await this.veterinarianRepository.save(veterinarian);
+    }
+
+    return {
+      message: 'Horarios actualizados exitosamente',
+      availabilityHours: veterinarian.availabilityHours
+    };
+  }
+
+  /**
+   * Obtener horarios de un veterinario específico por veterinarian ID
+   */
+  async getVeterinarianSchedule(veterinarianId: number, filters: { date?: string } = {}): Promise<any> {
+    this.logger.log(`Getting schedule for veterinarian ID: ${veterinarianId} with filters: ${JSON.stringify(filters)}`);
+
+    const veterinarian = await this.veterinarianRepository.findOne({
+      where: { id: veterinarianId },
+      relations: ['user'],
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(`Veterinario con ID ${veterinarianId} no encontrado`);
+    }
+
+    // Retornar horarios simulados
+    // En una implementación real, tendrías una entidad Schedule relacionada
+    return {
+      availabilityHours: veterinarian.availabilityHours || {},
+      schedule: [],
+      blockedDates: []
     };
   }
 } 

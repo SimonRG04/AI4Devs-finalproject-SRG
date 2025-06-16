@@ -51,16 +51,16 @@
                     <span class="text-gray-500 text-6xl">🐾</span>
                   </div>
                   <h4 class="mt-4 text-xl font-medium text-gray-900">{{ pet.name }}</h4>
-                  <p class="text-gray-500">{{ translate('petSpecies', pet.species) }} • {{ pet.breed }}</p>
+                  <p class="text-gray-500">{{ getSpeciesText(pet.species) }} • {{ pet.breed }}</p>
                 </div>
               </div>
 
-              <!-- Pet Details -->
+                              <!-- Pet Details -->
               <div class="lg:col-span-2">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h5 class="text-sm font-medium text-gray-500">Especie</h5>
-                    <p class="mt-1 text-sm text-gray-900">{{ translate('petSpecies', pet.species) }}</p>
+                    <p class="mt-1 text-sm text-gray-900">{{ getSpeciesText(pet.species) }}</p>
                   </div>
                   <div>
                     <h5 class="text-sm font-medium text-gray-500">Raza</h5>
@@ -93,22 +93,22 @@
                 </div>
 
                 <!-- Medical Info -->
-                <div v-if="pet.medical_conditions || pet.allergies || pet.medical_alerts" class="mt-6 pt-6 border-t border-gray-200">
+                <div v-if="pet.medicalConditions || pet.allergies || pet.medicalAlerts" class="mt-6 pt-6 border-t border-gray-200">
                   <h5 class="text-sm font-medium text-gray-900 mb-4">Información Médica</h5>
                   <div class="space-y-4">
-                    <div v-if="pet.medical_conditions">
+                    <div v-if="pet.medicalConditions">
                       <h6 class="text-sm font-medium text-gray-500">Condiciones Médicas</h6>
-                      <p class="mt-1 text-sm text-gray-900">{{ pet.medical_conditions }}</p>
+                      <p class="mt-1 text-sm text-gray-900">{{ pet.medicalConditions }}</p>
                     </div>
                     <div v-if="pet.allergies">
                       <h6 class="text-sm font-medium text-gray-500">Alergias</h6>
                       <p class="mt-1 text-sm text-gray-900">{{ pet.allergies }}</p>
                     </div>
-                    <div v-if="pet.medical_alerts">
+                    <div v-if="pet.medicalAlerts">
                       <h6 class="text-sm font-medium text-gray-500">Alertas Médicas</h6>
                       <div class="mt-1 flex items-center">
                         <ExclamationTriangleIcon class="h-5 w-5 text-yellow-500 mr-2" />
-                        <p class="text-sm text-gray-900">{{ pet.medical_alerts }}</p>
+                        <p class="text-sm text-gray-900">{{ pet.medicalAlerts }}</p>
                       </div>
                     </div>
                   </div>
@@ -285,6 +285,7 @@ import {
 
 // Services
 import petService from '@/services/petService'
+import appointmentService from '@/services/appointmentService'
 
 // Utils
 import { translate, getBadgeClass } from '@/utils/translations'
@@ -358,7 +359,39 @@ const calculateAge = (birthDate) => {
 }
 
 const getGenderText = (gender) => {
-  return translate('petGender', gender)
+  switch (gender) {
+    case 'MALE':
+      return 'Macho'
+    case 'FEMALE':
+      return 'Hembra'
+    default:
+      return 'No especificado'
+  }
+}
+
+const getSpeciesText = (species) => {
+  switch (species) {
+    case 'DOG':
+      return 'Perro'
+    case 'CAT':
+      return 'Gato'
+    case 'BIRD':
+      return 'Ave'
+    case 'RABBIT':
+      return 'Conejo'
+    case 'HAMSTER':
+      return 'Hámster'
+    case 'GUINEA_PIG':
+      return 'Cobaya'
+    case 'FISH':
+      return 'Pez'
+    case 'REPTILE':
+      return 'Reptil'
+    case 'OTHER':
+      return 'Otro'
+    default:
+      return species || 'No especificado'
+  }
 }
 
 const formatDate = (dateTime) => {
@@ -367,11 +400,41 @@ const formatDate = (dateTime) => {
 }
 
 const getStatusColor = (status) => {
-  return getBadgeClass('appointmentStatus', status)
+  switch (status) {
+    case 'SCHEDULED':
+      return 'bg-blue-100 text-blue-800'
+    case 'CONFIRMED':
+      return 'bg-green-100 text-green-800'
+    case 'IN_PROGRESS':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'COMPLETED':
+      return 'bg-green-100 text-green-800'
+    case 'CANCELLED':
+      return 'bg-red-100 text-red-800'
+    case 'NO_SHOW':
+      return 'bg-gray-100 text-gray-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
 }
 
 const getStatusText = (status) => {
-  return translate('appointmentStatus', status)
+  switch (status) {
+    case 'SCHEDULED':
+      return 'Programada'
+    case 'CONFIRMED':
+      return 'Confirmada'
+    case 'IN_PROGRESS':
+      return 'En Progreso'
+    case 'COMPLETED':
+      return 'Completada'
+    case 'CANCELLED':
+      return 'Cancelada'
+    case 'NO_SHOW':
+      return 'No Asistió'
+    default:
+      return status || 'Desconocido'
+  }
 }
 
 const getStatusBadgeClass = (status) => {

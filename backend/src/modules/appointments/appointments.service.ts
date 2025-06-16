@@ -570,7 +570,7 @@ export class AppointmentsService {
     } else if (currentUser.role === UserRole.VET) {
       // Los veterinarios ven sus propias citas
       queryBuilder.andWhere('vetUser.id = :userId', { 
-        userId: currentUser.sub 
+        userId: currentUser.id || currentUser.sub 
       });
     }
     // Los administradores pueden ver todas las citas
@@ -653,7 +653,7 @@ export class AppointmentsService {
       }
     } else if (currentUser.role === UserRole.VET) {
       // Verificar que el veterinario solo acceda a sus propias citas
-      if (appointment.veterinarian?.user?.id !== currentUser.sub) {
+      if (appointment.veterinarian?.user?.id !== (currentUser.id || currentUser.sub)) {
         throw new ForbiddenException('No tienes acceso a esta cita');
       }
     }
@@ -676,5 +676,68 @@ export class AppointmentsService {
       newDateTime,
       appointment.duration,
     );
+  }
+
+  /**
+   * Obtener citas del día actual para el veterinario
+   */
+  async getTodayAppointments(currentUser: any): Promise<Appointment[]> {
+    this.logger.log(`Getting today appointments for user: ${currentUser.id || currentUser.sub}`);
+
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+    const queryBuilder = this.appointmentRepository
+      .createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.pet', 'pet')
+      .leftJoinAndSelect('pet.client', 'client')
+      .leftJoinAndSelect('client.user', 'clientUser')
+      .leftJoinAndSelect('appointment.veterinarian', 'veterinarian')
+      .leftJoinAndSelect('veterinarian.user', 'vetUser')
+      .where('appointment.scheduledAt >= :startOfDay', { startOfDay })
+      .andWhere('appointment.scheduledAt <= :endOfDay', { endOfDay })
+      .orderBy('appointment.scheduledAt', 'ASC');
+
+    // Aplicar filtros de acceso
+    if (currentUser.role === UserRole.VET) {
+      queryBuilder.andWhere('vetUser.id = :userId', { userId: currentUser.id || currentUser.sub });
+    }
+
+    return queryBuilder.getMany();
+  }
+
+  /**
+   * Obtener próximas citas
+   */
+  async getUpcomingAppointments(currentUser: any, limit: number = 5): Promise<Appointment[]> {
+    this.logger.log(`Getting upcoming appointments for user: ${currentUser.id || currentUser.sub} with limit: ${limit}`);
+
+    const now = new Date();
+
+    const queryBuilder = this.appointmentRepository
+      .createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.pet', 'pet')
+      .leftJoinAndSelect('pet.client', 'client')
+      .leftJoinAndSelect('client.user', 'clientUser')
+      .leftJoinAndSelect('appointment.veterinarian', 'veterinarian')
+      .leftJoinAndSelect('veterinarian.user', 'vetUser')
+      .where('appointment.scheduledAt > :now', { now })
+      .andWhere('appointment.status IN (:...statuses)', { 
+        statuses: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] 
+      })
+      .orderBy('appointment.scheduledAt', 'ASC')
+      .limit(limit);
+
+    // Aplicar filtros de acceso
+    if (currentUser.role === UserRole.CLIENT) {
+      queryBuilder.andWhere('pet.clientId = :clientId', { 
+        clientId: currentUser.clientId 
+      });
+    } else if (currentUser.role === UserRole.VET) {
+      queryBuilder.andWhere('vetUser.id = :userId', { userId: currentUser.id || currentUser.sub });
+    }
+
+    return queryBuilder.getMany();
   }
 } 

@@ -106,8 +106,8 @@
                 <div class="flex items-center space-x-4">
                   <!-- Pet Photo -->
                   <img
-                    v-if="appointment.pet?.photo_url"
-                    :src="appointment.pet.photo_url"
+                    v-if="appointment.pet?.photoUrl || appointment.pet?.photo_url"
+                    :src="appointment.pet?.photoUrl || appointment.pet?.photo_url"
                     :alt="appointment.pet.name"
                     class="h-12 w-12 rounded-full object-cover"
                   />
@@ -131,19 +131,20 @@
                       </span>
                     </div>
                     <p class="text-sm text-gray-600">
-                      {{ appointment.pet?.owner?.first_name }} {{ appointment.pet?.owner?.last_name }}
+                      {{ appointment.pet?.client?.user?.firstName || appointment.pet?.client?.user?.first_name }} 
+                      {{ appointment.pet?.client?.user?.lastName || appointment.pet?.client?.user?.last_name }}
                     </p>
                     <p class="text-sm text-gray-500">
-                      {{ appointment.reason }}
+                      {{ getAppointmentTypeText(appointment.type) }}
                     </p>
                     <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                       <div class="flex items-center">
                         <CalendarIcon class="h-4 w-4 mr-1" />
-                        {{ formatDateTime(appointment.dateTime) }}
+                        {{ formatDateTime(appointment.scheduledAt || appointment.dateTime) }}
                       </div>
                       <div class="flex items-center">
                         <ClockIcon class="h-4 w-4 mr-1" />
-                        {{ appointment.duration }} min
+                        {{ appointment.duration || appointment.durationMinutes }} min
                       </div>
                     </div>
                   </div>
@@ -252,6 +253,9 @@ import {
 // Services
 import appointmentService from '@/services/appointmentService'
 
+// Utils
+import { translate } from '@/utils/translations'
+
 const toast = useToast()
 
 // Reactive data
@@ -287,8 +291,8 @@ const filteredAppointments = computed(() => {
     const search = filters.value.patient.toLowerCase()
     filtered = filtered.filter(appointment => 
       appointment.pet?.name?.toLowerCase().includes(search) ||
-      appointment.pet?.owner?.first_name?.toLowerCase().includes(search) ||
-      appointment.pet?.owner?.last_name?.toLowerCase().includes(search)
+      appointment.pet?.client?.user?.firstName?.toLowerCase().includes(search) ||
+      appointment.pet?.client?.user?.lastName?.toLowerCase().includes(search)
     )
   }
 
@@ -389,14 +393,11 @@ const getStatusColor = (status) => {
 }
 
 const getStatusText = (status) => {
-  const texts = {
-    SCHEDULED: 'Programada',
-    CONFIRMED: 'Confirmada',
-    IN_PROGRESS: 'En Progreso',
-    COMPLETED: 'Completada',
-    CANCELLED: 'Cancelada'
-  }
-  return texts[status] || status
+  return translate('appointmentStatus', status)
+}
+
+const getAppointmentTypeText = (type) => {
+  return translate('appointmentType', type)
 }
 
 // Watchers

@@ -62,7 +62,7 @@
               <!-- Appointment Details -->
               <div>
                 <h4 class="text-sm font-medium text-gray-900 mb-4">Tipo de Cita</h4>
-                <p class="text-sm text-gray-700">{{ translate('appointmentType', appointment.type) }}</p>
+                <p class="text-sm text-gray-700">{{ getAppointmentTypeText(appointment.type) }}</p>
               </div>
 
               <div>
@@ -253,6 +253,14 @@ const getStatusColor = (status) => {
 
 const getStatusText = (status) => {
   return translate('appointmentStatus', status)
+}
+
+const getAppointmentTypeText = (type) => {
+  return translate('appointmentType', type)
+}
+
+const getPriorityText = (priority) => {
+  return translate('appointmentPriority', priority)
 }
 
 // Lifecycle

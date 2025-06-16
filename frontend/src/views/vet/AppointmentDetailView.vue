@@ -35,10 +35,10 @@
               
               <div>
                 <h1 class="text-2xl font-bold text-gray-900">
-                  Cita - {{ formatDate(appointment.dateTime) }}
+                  Cita - {{ formatDate(appointment.scheduledAt || appointment.dateTime) }}
                 </h1>
                 <p class="mt-1 text-sm text-gray-500">
-                  {{ formatTime(appointment.dateTime) }} | {{ appointment.type }}
+                  {{ formatTime(appointment.scheduledAt || appointment.dateTime) }} | {{ getTypeLabel(appointment.appointmentType || appointment.type) }}
                 </p>
               </div>
             </div>
@@ -142,8 +142,8 @@
               
               <div v-if="appointment.pet" class="flex items-center space-x-4 mb-6">
                 <img 
-                  v-if="appointment.pet.photoUrl" 
-                  :src="appointment.pet.photoUrl" 
+                  v-if="appointment.pet.photoUrl || appointment.pet.photo_url" 
+                  :src="appointment.pet.photoUrl || appointment.pet.photo_url" 
                   :alt="appointment.pet.name"
                   class="h-16 w-16 rounded-full object-cover ring-4 ring-white shadow-lg"
                 >
@@ -156,11 +156,11 @@
                   <div class="mt-1 flex items-center space-x-4 text-sm text-gray-500">
                     <span class="flex items-center">
                       <TagIcon class="h-4 w-4 mr-1" />
-                      {{ appointment.pet.species }} - {{ appointment.pet.breed }}
+                      {{ getSpeciesText(appointment.pet.species) }} - {{ appointment.pet.breed }}
                     </span>
                     <span class="flex items-center">
                       <CakeIcon class="h-4 w-4 mr-1" />
-                      {{ calculateAge(appointment.pet.birthDate) }}
+                      {{ calculateAge(appointment.pet.birthDate || appointment.pet.birth_date) }}
                     </span>
                     <span class="flex items-center">
                       <ScaleIcon class="h-4 w-4 mr-1" />
@@ -170,7 +170,7 @@
                   <div class="mt-2">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
                           :class="getGenderBadgeClass(appointment.pet.gender)">
-                      {{ appointment.pet.gender === 'MALE' ? 'Macho' : 'Hembra' }}
+                      {{ getGenderText(appointment.pet.gender) }}
                     </span>
                   </div>
                 </div>
@@ -192,7 +192,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <p class="text-sm font-medium text-gray-500">Nombre</p>
-                    <p class="mt-1 text-sm text-gray-900">{{ appointment.pet.owner?.fullName }}</p>
+                    <p class="mt-1 text-sm text-gray-900">{{ (appointment.pet.owner?.firstName || appointment.pet.owner?.first_name) + ' ' + (appointment.pet.owner?.lastName || appointment.pet.owner?.last_name) }}</p>
                   </div>
                   <div>
                     <p class="text-sm font-medium text-gray-500">Teléfono</p>
@@ -222,7 +222,7 @@
                 
                 <div>
                   <p class="text-sm font-medium text-gray-500">Tipo de cita</p>
-                  <p class="mt-1 text-sm text-gray-900">{{ getTypeLabel(appointment.type) }}</p>
+                  <p class="mt-1 text-sm text-gray-900">{{ getTypeLabel(appointment.appointmentType || appointment.type) }}</p>
                 </div>
                 
                 <div>
@@ -425,6 +425,9 @@ import { useToast } from 'vue-toastification'
 import { format, parseISO, differenceInYears, differenceInMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+// Utils
+import { translate } from '@/utils/translations'
+
 // Icons
 import {
   ArrowLeftIcon,
@@ -582,36 +585,15 @@ const getStatusBadgeClass = (status) => {
 }
 
 const getStatusLabel = (status) => {
-  const labels = {
-    'SCHEDULED': 'Programada',
-    'CONFIRMED': 'Confirmada',
-    'IN_PROGRESS': 'En Progreso',
-    'COMPLETED': 'Completada',
-    'CANCELLED': 'Cancelada'
-  }
-  return labels[status] || status
+  return translate('appointmentStatus', status)
 }
 
 const getTypeLabel = (type) => {
-  const labels = {
-    'CONSULTATION': 'Consulta General',
-    'VACCINATION': 'Vacunación',
-    'CHECKUP': 'Chequeo',
-    'SURGERY': 'Cirugía',
-    'EMERGENCY': 'Emergencia',
-    'FOLLOW_UP': 'Seguimiento'
-  }
-  return labels[type] || type
+  return translate('appointmentType', type)
 }
 
 const getPriorityLabel = (priority) => {
-  const labels = {
-    'LOW': 'Baja',
-    'MEDIUM': 'Media',
-    'HIGH': 'Alta',
-    'URGENT': 'Urgente'
-  }
-  return labels[priority] || priority
+  return translate('appointmentPriority', priority)
 }
 
 const getPriorityBadgeClass = (priority) => {
@@ -628,6 +610,14 @@ const getGenderBadgeClass = (gender) => {
   return gender === 'MALE' 
     ? 'bg-blue-100 text-blue-800'
     : 'bg-pink-100 text-pink-800'
+}
+
+const getGenderText = (gender) => {
+  return translate('petGender', gender)
+}
+
+const getSpeciesText = (species) => {
+  return translate('petSpecies', species)
 }
 
 const updateStatus = async (newStatus) => {

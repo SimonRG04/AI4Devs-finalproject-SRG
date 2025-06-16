@@ -77,7 +77,7 @@
             <div class="flex justify-between items-start mb-4">
               <div>
                 <h3 class="text-lg font-semibold text-gray-900">{{ pet.name }}</h3>
-                <p class="text-sm text-gray-600">{{ pet.species }} • {{ pet.breed }}</p>
+                <p class="text-sm text-gray-600">{{ getSpeciesText(pet.species) }} • {{ pet.breed }}</p>
               </div>
               <div class="flex space-x-2">
                 <button
@@ -106,7 +106,7 @@
               </div>
               <div class="flex justify-between">
                 <span>Sexo:</span>
-                <span>{{ pet.gender === 'MALE' ? 'Macho' : 'Hembra' }}</span>
+                <span>{{ getGenderText(pet.gender) }}</span>
               </div>
               <div v-if="pet.microchipId" class="flex justify-between">
                 <span>Microchip:</span>
@@ -249,6 +249,42 @@ const calculateAge = (birthDate) => {
     return `${years} año${years > 1 ? 's' : ''}`
   } else {
     return `${months} mes${months > 1 ? 'es' : ''}`
+  }
+}
+
+const getSpeciesText = (species) => {
+  switch (species) {
+    case 'DOG':
+      return 'Perro'
+    case 'CAT':
+      return 'Gato'
+    case 'BIRD':
+      return 'Ave'
+    case 'RABBIT':
+      return 'Conejo'
+    case 'HAMSTER':
+      return 'Hámster'
+    case 'GUINEA_PIG':
+      return 'Cobaya'
+    case 'FISH':
+      return 'Pez'
+    case 'REPTILE':
+      return 'Reptil'
+    case 'OTHER':
+      return 'Otro'
+    default:
+      return species || 'No especificado'
+  }
+}
+
+const getGenderText = (gender) => {
+  switch (gender) {
+    case 'MALE':
+      return 'Macho'
+    case 'FEMALE':
+      return 'Hembra'
+    default:
+      return 'No especificado'
   }
 }
 

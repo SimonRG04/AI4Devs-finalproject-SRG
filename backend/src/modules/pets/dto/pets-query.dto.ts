@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsEnum, IsString, IsPositive, Min, Max } from 'class-validator';
+import { IsOptional, IsEnum, IsString, IsPositive, Min, Max, IsBoolean } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { PetGender, PetSpecies } from '../entities/pet.entity';
 
@@ -54,6 +54,28 @@ export class PetsQueryDto {
   @IsString({ message: 'El nombre debe ser una cadena de texto' })
   @Transform(({ value }) => value?.trim())
   name?: string;
+
+  @ApiPropertyOptional({
+    description: 'Buscar por nombre de mascota o propietario (búsqueda general)',
+    example: 'Max',
+  })
+  @IsOptional()
+  @IsString({ message: 'La búsqueda debe ser una cadena de texto' })
+  @Transform(({ value }) => value?.trim())
+  search?: string;
+
+  @ApiPropertyOptional({
+    description: 'Incluir información del propietario en la respuesta',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return Boolean(value);
+  })
+  @IsBoolean({ message: 'includeOwner debe ser un valor booleano' })
+  includeOwner?: boolean;
 
   @ApiPropertyOptional({
     description: 'Filtrar por raza',

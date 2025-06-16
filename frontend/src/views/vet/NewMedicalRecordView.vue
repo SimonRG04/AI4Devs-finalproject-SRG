@@ -15,7 +15,7 @@
             <div>
               <h1 class="text-2xl font-bold text-gray-900">Nuevo Registro Médico</h1>
               <p class="mt-1 text-sm text-gray-500" v-if="pet">
-                Para {{ pet.name }} ({{ pet.species }})
+                Para {{ pet.name }} ({{ getSpeciesText(pet.species) }})
               </p>
             </div>
           </div>
@@ -70,8 +70,8 @@
             <div v-if="pet" class="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div class="flex items-center space-x-3">
                 <img 
-                  v-if="pet.photoUrl" 
-                  :src="pet.photoUrl" 
+                  v-if="pet.photoUrl || pet.photo_url" 
+                  :src="pet.photoUrl || pet.photo_url" 
                   :alt="pet.name"
                   class="h-12 w-12 rounded-full object-cover"
                 >
@@ -80,13 +80,13 @@
                 </div>
                 <div>
                   <p class="text-sm font-medium text-gray-900">{{ pet.name }}</p>
-                  <p class="text-sm text-gray-500">{{ pet.species }} - {{ pet.breed }}</p>
+                  <p class="text-sm text-gray-500">{{ getSpeciesText(pet.species) }} - {{ pet.breed }}</p>
                 </div>
               </div>
               
               <div>
                 <p class="text-sm font-medium text-gray-500">Edad</p>
-                <p class="mt-1 text-sm text-gray-900">{{ calculateAge(pet.birthDate) }}</p>
+                <p class="mt-1 text-sm text-gray-900">{{ calculateAge(pet.birthDate || pet.birth_date) }}</p>
               </div>
               
               <div>
@@ -96,7 +96,7 @@
               
               <div>
                 <p class="text-sm font-medium text-gray-500">Propietario</p>
-                <p class="mt-1 text-sm text-gray-900">{{ pet.owner?.fullName }}</p>
+                <p class="mt-1 text-sm text-gray-900">{{ (pet.owner?.firstName || pet.owner?.first_name) + ' ' + (pet.owner?.lastName || pet.owner?.last_name) }}</p>
               </div>
             </div>
           </div>
@@ -499,6 +499,9 @@ import { useToast } from 'vue-toastification'
 import { format, addDays, parseISO, differenceInYears, differenceInMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+// Utils
+import { translate } from '@/utils/translations'
+
 // Icons
 import {
   ArrowLeftIcon,
@@ -560,7 +563,7 @@ const minFollowUpDate = computed(() => {
 const loadPetData = async () => {
   try {
     initialLoading.value = true
-    const petData = await petsStore.fetchPetById(petId.value)
+    const petData = await petsStore.fetchPet(petId.value)
     pet.value = petData
     
     // Set initial weight if available
@@ -586,6 +589,10 @@ const calculateAge = (birthDate) => {
   } else {
     return `${months} mes${months !== 1 ? 'es' : ''}`
   }
+}
+
+const getSpeciesText = (species) => {
+  return translate('petSpecies', species)
 }
 
 const addPrescription = () => {

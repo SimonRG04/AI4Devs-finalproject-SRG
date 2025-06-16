@@ -38,7 +38,7 @@
                   Historial Médico - {{ pet.name }}
                 </h1>
                 <p class="mt-1 text-sm text-gray-500">
-                  {{ pet.species }} - {{ pet.breed }} | {{ calculateAge(pet.birthDate) }}
+                  {{ getSpeciesText(pet.species) }} - {{ pet.breed }} | {{ calculateAge(pet.birthDate || pet.birth_date) }}
                 </p>
               </div>
             </div>
@@ -76,8 +76,8 @@
         <div class="px-4 py-5 sm:p-6">
           <div class="flex items-center space-x-6">
             <img 
-              v-if="pet.photoUrl" 
-              :src="pet.photoUrl" 
+              v-if="pet.photoUrl || pet.photo_url" 
+              :src="pet.photoUrl || pet.photo_url" 
               :alt="pet.name"
               class="h-20 w-20 rounded-full object-cover ring-4 ring-white shadow-lg"
             >
@@ -90,7 +90,7 @@
               <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <p class="font-medium text-gray-500">Especie</p>
-                  <p class="text-gray-900">{{ pet.species }}</p>
+                  <p class="text-gray-900">{{ getSpeciesText(pet.species) }}</p>
                 </div>
                 <div>
                   <p class="font-medium text-gray-500">Raza</p>
@@ -102,7 +102,7 @@
                 </div>
                 <div>
                   <p class="font-medium text-gray-500">Propietario</p>
-                  <p class="text-gray-900">{{ pet.owner?.fullName }}</p>
+                  <p class="text-gray-900">{{ (pet.owner?.firstName || pet.owner?.first_name) + ' ' + (pet.owner?.lastName || pet.owner?.last_name) }}</p>
                 </div>
               </div>
             </div>
@@ -418,6 +418,9 @@ import { useToast } from 'vue-toastification'
 import { format, parseISO, differenceInYears, differenceInMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+// Utils
+import { translate } from '@/utils/translations'
+
 // Icons
 import {
   ArrowLeftIcon,
@@ -555,7 +558,7 @@ const loadPatientData = async () => {
     error.value = null
     
     // Load pet details
-    const petData = await petsStore.fetchPetById(petId.value)
+    const petData = await petsStore.fetchPet(petId.value)
     pet.value = petData
     
     // Load medical records
@@ -610,15 +613,11 @@ const getRecordIcon = (visitType) => {
 }
 
 const getRecordTypeLabel = (visitType) => {
-  const labels = {
-    'CONSULTATION': 'Consulta',
-    'EMERGENCY': 'Emergencia',
-    'SURGERY': 'Cirugía',
-    'VACCINATION': 'Vacunación',
-    'CHECKUP': 'Chequeo',
-    'FOLLOW_UP': 'Seguimiento'
-  }
-  return labels[visitType] || visitType
+  return translate('appointmentType', visitType)
+}
+
+const getSpeciesText = (species) => {
+  return translate('petSpecies', species)
 }
 
 const getRecordTypeBadgeClass = (visitType) => {

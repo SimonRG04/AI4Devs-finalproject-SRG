@@ -40,12 +40,12 @@
               >
                 <div class="flex items-center space-x-3">
                   <div class="h-12 w-12 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span class="text-lg">{{ pet.species === 'DOG' ? '🐕' : pet.species === 'CAT' ? '🐱' : '🐾' }}</span>
+                    <span class="text-lg">{{ getSpeciesEmoji(pet.species) }}</span>
                   </div>
                   <div class="flex-1">
                     <h4 class="text-sm font-medium text-gray-900">{{ pet.name }}</h4>
-                    <p class="text-sm text-gray-500">{{ pet.species }} • {{ pet.breed }}</p>
-                    <p class="text-xs text-gray-400">{{ calculateAge(pet.birth_date) }}</p>
+                    <p class="text-sm text-gray-500">{{ getSpeciesText(pet.species) }} • {{ pet.breed }}</p>
+                    <p class="text-xs text-gray-400">{{ calculateAge(pet.birthDate) }}</p>
                   </div>
                 </div>
                 <!-- Check Icon -->
@@ -164,27 +164,26 @@
               <!-- Motivo -->
               <div>
                 <label for="reason" class="block text-sm font-medium text-gray-700 mb-1">
-                  Motivo de la consulta *
+                  Tipo de consulta *
                 </label>
                 <select
                   id="reason"
-                  v-model="values.reason"
-                  @change="(e) => setFieldValue('reason', e.target.value)"
+                  v-model="values.type"
+                  @change="(e) => setFieldValue('type', e.target.value)"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
-                  :class="{ 'border-red-500': errors.reason }"
+                  :class="{ 'border-red-500': errors.type }"
                 >
-                  <option value="">Seleccionar motivo</option>
-                  <option value="Consulta General">Consulta General</option>
-                  <option value="Vacunación">Vacunación</option>
-                  <option value="Control">Control de Rutina</option>
-                  <option value="Emergencia">Emergencia</option>
-                  <option value="Cirugía">Cirugía</option>
-                  <option value="Examen">Exámenes</option>
-                  <option value="Dermatología">Consulta Dermatológica</option>
-                  <option value="Dental">Consulta Dental</option>
-                  <option value="Otro">Otro</option>
+                  <option value="">Seleccionar tipo</option>
+                  <option value="CONSULTATION">Consulta General</option>
+                  <option value="VACCINATION">Vacunación</option>
+                  <option value="CHECKUP">Control de Rutina</option>
+                  <option value="EMERGENCY">Emergencia</option>
+                  <option value="SURGERY">Cirugía</option>
+                  <option value="DENTAL">Consulta Dental</option>
+                  <option value="GROOMING">Peluquería</option>
+                  <option value="FOLLOW_UP">Seguimiento</option>
                 </select>
-                <p v-if="errors.reason" class="text-red-500 text-sm mt-1">{{ errors.reason }}</p>
+                <p v-if="errors.type" class="text-red-500 text-sm mt-1">{{ errors.type }}</p>
               </div>
 
               <!-- Duración -->
@@ -294,7 +293,7 @@
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Motivo:</span>
-                <span class="font-medium">{{ values.reason || 'No especificado' }}</span>
+                <span class="font-medium">{{ values.type || 'No especificado' }}</span>
               </div>
               <div v-if="selectedVeterinarian?.consultationFee || selectedVeterinarian?.consultation_fee" class="flex justify-between border-t pt-3">
                 <span class="text-gray-600">Costo de consulta:</span>
@@ -369,7 +368,7 @@ const schema = yup.object({
   veterinarianId: yup.number().required('Debes seleccionar un veterinario'),
   date: yup.date().required('Debes seleccionar una fecha'),
   time: yup.string().required('Debes seleccionar una hora'),
-  reason: yup.string().min(1, 'El motivo de la consulta es obligatorio').required('El motivo de la consulta es obligatorio'),
+  type: yup.string().min(1, 'El motivo de la consulta es obligatorio').required('El motivo de la consulta es obligatorio'),
   duration: yup.number().positive().default(30),
   notes: yup.string().nullable()
 })
@@ -382,7 +381,7 @@ const { values, errors, setFieldValue, handleSubmit, meta } = useForm({
     veterinarianId: null,
     date: null,
     time: null,
-    reason: '',
+    type: '',
     duration: 30,
     notes: ''
   }
@@ -548,8 +547,56 @@ const updateImageUrl = (index, value) => {
   imageUrls.value[index] = value
 }
 
+const getSpeciesText = (species) => {
+  switch (species) {
+    case 'DOG':
+      return 'Perro'
+    case 'CAT':
+      return 'Gato'
+    case 'BIRD':
+      return 'Ave'
+    case 'RABBIT':
+      return 'Conejo'
+    case 'HAMSTER':
+      return 'Hámster'
+    case 'GUINEA_PIG':
+      return 'Cobaya'
+    case 'FISH':
+      return 'Pez'
+    case 'REPTILE':
+      return 'Reptil'
+    case 'OTHER':
+      return 'Otro'
+    default:
+      return species || 'No especificado'
+  }
+}
+
+const getSpeciesEmoji = (species) => {
+  switch (species) {
+    case 'DOG':
+      return '🐕'
+    case 'CAT':
+      return '🐱'
+    case 'BIRD':
+      return '🐦'
+    case 'RABBIT':
+      return '🐰'
+    case 'HAMSTER':
+      return '🐹'
+    case 'GUINEA_PIG':
+      return '🐹'
+    case 'FISH':
+      return '🐠'
+    case 'REPTILE':
+      return '🦎'
+    default:
+      return '🐾'
+  }
+}
+
 const calculateAge = (birthDate) => {
-  if (!birthDate) return 'N/A'
+  if (!birthDate) return 'Edad no especificada'
   
   const birth = new Date(birthDate)
   const years = differenceInYears(new Date(), birth)
@@ -572,7 +619,7 @@ const onSubmit = handleSubmit(async (formValues) => {
     isSubmitting.value = true
     
     // Validaciones adicionales
-    if (!formValues.reason) {
+    if (!formValues.type) {
       toast.error('Debes especificar el motivo de la consulta')
       return
     }
@@ -589,11 +636,11 @@ const onSubmit = handleSubmit(async (formValues) => {
       petId: formValues.petId,
       veterinarianId: formValues.veterinarianId,
       scheduledAt: appointmentDate.toISOString(),
-      type: 'CONSULTATION', // Tipo por defecto basado en el motivo
+      type: formValues.type,
       duration: parseInt(formValues.duration || 30),
       priority: 'NORMAL', // Prioridad por defecto
       status: 'SCHEDULED', // Estado por defecto
-      notes: formValues.reason ? `Motivo: ${formValues.reason}${formValues.notes ? '\n\nNotas adicionales: ' + formValues.notes : ''}` : formValues.notes || null,
+      notes: formValues.notes ? `Motivo: ${formValues.type}\n\nNotas adicionales: ${formValues.notes}` : null,
       images: validImageUrls.value.length > 0 ? validImageUrls.value : undefined
     }
     
@@ -621,8 +668,8 @@ onMounted(() => {
 })
 
 // Debug watchers
-watch(() => values.reason, (newValue) => {
-  console.log('Reason changed:', newValue)
+watch(() => values.type, (newValue) => {
+  console.log('Type changed:', newValue)
 }, { immediate: true })
 
 watch(() => values, (newValues) => {

@@ -94,8 +94,12 @@ export class PetsService {
 
     const queryBuilder = this.petRepository
       .createQueryBuilder('pet')
-      .leftJoinAndSelect('pet.client', 'client')
-      .leftJoinAndSelect('client.user', 'user');
+      .leftJoinAndSelect('pet.client', 'client');
+
+    // Solo incluir información del propietario si se solicita explícitamente
+    if (query.includeOwner) {
+      queryBuilder.leftJoinAndSelect('client.user', 'user');
+    }
 
     // Aplicar filtros de acceso según el rol
     this.applyAccessFilters(queryBuilder, currentUser);
@@ -378,6 +382,26 @@ export class PetsService {
       queryBuilder.andWhere('LOWER(pet.name) LIKE LOWER(:name)', { 
         name: `%${query.name}%` 
       });
+    }
+
+    if (query.search) {
+      // Búsqueda general en nombre de mascota, raza, o nombre del propietario
+      // Solo buscar en propietario si la relación está incluida
+      if (query.includeOwner) {
+        queryBuilder.andWhere(
+          '(LOWER(pet.name) LIKE LOWER(:search) OR ' +
+          'LOWER(pet.breed) LIKE LOWER(:search) OR ' +
+          'LOWER(CONCAT(user.firstName, \' \', user.lastName)) LIKE LOWER(:search) OR ' +
+          'LOWER(CONCAT(user.first_name, \' \', user.last_name)) LIKE LOWER(:search))',
+          { search: `%${query.search}%` }
+        );
+      } else {
+        queryBuilder.andWhere(
+          '(LOWER(pet.name) LIKE LOWER(:search) OR ' +
+          'LOWER(pet.breed) LIKE LOWER(:search))',
+          { search: `%${query.search}%` }
+        );
+      }
     }
 
     if (query.breed) {
