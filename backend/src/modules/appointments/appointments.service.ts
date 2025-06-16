@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder, Between, Not } from 'typeorm';
+import { Repository, SelectQueryBuilder, Between, Not, In } from 'typeorm';
 import { Appointment, AppointmentStatus } from './entities/appointment.entity';
 import { Pet } from '../pets/entities/pet.entity';
 import { Veterinarian } from '../users/entities/veterinarian.entity';
@@ -51,15 +51,21 @@ export class AppointmentsService {
   ): Promise<Appointment> {
     this.logger.log(`Creating appointment for pet ${createAppointmentDto.petId}`);
 
-    const appointmentDateTime = new Date(createAppointmentDto.dateTime);
+    const appointmentDateTime = new Date(createAppointmentDto.scheduledAt);
 
     // Validaciones previas
     await this.validateAppointmentCreation(createAppointmentDto, currentUser, appointmentDateTime);
 
     try {
       const appointment = this.appointmentRepository.create({
-        ...createAppointmentDto,
-        dateTime: appointmentDateTime,
+        petId: createAppointmentDto.petId,
+        veterinarianId: createAppointmentDto.veterinarianId || currentUser.veterinarianId,
+        scheduledAt: appointmentDateTime,
+        type: createAppointmentDto.type,
+        duration: createAppointmentDto.duration || 30,
+        priority: createAppointmentDto.priority,
+        status: createAppointmentDto.status,
+        notes: createAppointmentDto.notes,
       });
 
       const savedAppointment = await this.appointmentRepository.save(appointment);
@@ -169,17 +175,17 @@ export class AppointmentsService {
     }
 
     // Si se está cambiando la fecha/hora, validar disponibilidad
-    if (updateAppointmentDto.dateTime) {
-      const newDateTime = new Date(updateAppointmentDto.dateTime);
+    if (updateAppointmentDto.scheduledAt) {
+      const newDateTime = new Date(updateAppointmentDto.scheduledAt);
       await this.validateDateTimeUpdate(appointment, newDateTime);
     }
 
     try {
       const updateData = {
         ...updateAppointmentDto,
-        dateTime: updateAppointmentDto.dateTime 
-          ? new Date(updateAppointmentDto.dateTime) 
-          : appointment.dateTime,
+        scheduledAt: updateAppointmentDto.scheduledAt 
+          ? new Date(updateAppointmentDto.scheduledAt) 
+          : appointment.scheduledAt,
       };
 
       await this.appointmentRepository.update(id, updateData);
@@ -212,7 +218,7 @@ export class AppointmentsService {
 
     // Validar que se puede cancelar (ej: con al menos 2 horas de anticipación)
     const now = new Date();
-    const appointmentTime = new Date(appointment.dateTime);
+    const appointmentTime = new Date(appointment.scheduledAt);
     const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
     if (hoursUntilAppointment < 2 && currentUser.role !== UserRole.ADMIN) {
@@ -294,19 +300,21 @@ export class AppointmentsService {
     const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
 
     // Obtener citas existentes para ese día
-    const existingAppointments = await this.appointmentRepository.find({
-      where: {
-        veterinarianId,
-        dateTime: Between(startOfDay, endOfDay),
-        status: Not(['CANCELLED', 'MISSED'] as any),
-      },
-    });
+    const existingAppointments = await this.appointmentRepository
+      .createQueryBuilder('appointment')
+      .where('appointment.veterinarian_id = :veterinarianId', { veterinarianId })
+      .andWhere('appointment.scheduled_at BETWEEN :startOfDay AND :endOfDay', { startOfDay, endOfDay })
+      .andWhere('appointment.status NOT IN (:...excludedStatuses)', { 
+        excludedStatuses: [AppointmentStatus.CANCELLED, AppointmentStatus.MISSED] 
+      })
+      .getMany();
 
     // Generar slots de disponibilidad
     const slots = this.generateAvailabilitySlots(
       date,
       existingAppointments,
-      query.duration || 30
+      query.duration || 30,
+      veterinarian
     );
 
     const availableSlots = slots.filter(slot => slot.available);
@@ -353,15 +361,35 @@ export class AppointmentsService {
       throw new BadRequestException('La fecha de la cita debe ser futura');
     }
 
-    // Validar horario de trabajo (8:00 AM - 6:00 PM)
-    const hour = dateTime.getHours();
-    if (hour < 8 || hour >= 18) {
-      throw new BadRequestException('Las citas solo se pueden programar entre 8:00 AM y 6:00 PM');
+    // Validar que el veterinario existe y obtener sus horarios
+    const veterinarian = await this.veterinarianRepository.findOne({
+      where: { id: dto.veterinarianId },
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(`Veterinario con ID ${dto.veterinarianId} no encontrado`);
     }
 
-    // Validar que no sea domingo
-    if (dateTime.getDay() === 0) {
-      throw new BadRequestException('No se pueden programar citas los domingos');
+    // Validar disponibilidad según el horario del veterinario
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[dateTime.getDay()];
+    const availabilityHours = veterinarian.availabilityHours || {};
+    const dayConfig = availabilityHours[dayName];
+
+    if (!dayConfig || !dayConfig.isAvailable) {
+      throw new BadRequestException(`El veterinario no está disponible los ${dayName === 'sunday' ? 'domingos' : dayName === 'monday' ? 'lunes' : dayName}`);
+    }
+
+    // Validar horario dentro del rango permitido
+    const [startHour, startMinute] = dayConfig.start.split(':').map(Number);
+    const [endHour, endMinute] = dayConfig.end.split(':').map(Number);
+    
+    const appointmentTime = dateTime.getHours() * 60 + dateTime.getMinutes();
+    const startTime = startHour * 60 + startMinute;
+    const endTime = endHour * 60 + endMinute;
+    
+    if (appointmentTime < startTime || appointmentTime >= endTime) {
+      throw new BadRequestException(`Las citas para este veterinario solo se pueden programar entre ${dayConfig.start} y ${dayConfig.end}`);
     }
 
     // Validar que la mascota existe y el usuario tiene acceso
@@ -378,17 +406,12 @@ export class AppointmentsService {
       throw new ForbiddenException('No tienes acceso a esta mascota');
     }
 
-    // Validar que el veterinario existe
-    const veterinarian = await this.veterinarianRepository.findOne({
-      where: { id: dto.veterinarianId },
-    });
-
-    if (!veterinarian) {
-      throw new NotFoundException(`Veterinario con ID ${dto.veterinarianId} no encontrado`);
-    }
-
-    // Validar conflictos de horario
-    await this.validateTimeSlotAvailability(dto.veterinarianId, dateTime, dto.durationMinutes || 30);
+    // Validar disponibilidad del horario
+    await this.validateTimeSlotAvailability(
+      dto.veterinarianId,
+      dateTime,
+      dto.duration || 30,
+    );
   }
 
   /**
@@ -408,9 +431,9 @@ export class AppointmentsService {
         statuses: [AppointmentStatus.CANCELLED, AppointmentStatus.MISSED] 
       })
       .andWhere(
-        '(appointment.dateTime <= :startTime AND appointment.dateTime + INTERVAL appointment.durationMinutes MINUTE > :startTime) OR ' +
-        '(appointment.dateTime < :endTime AND appointment.dateTime + INTERVAL appointment.durationMinutes MINUTE >= :endTime) OR ' +
-        '(appointment.dateTime >= :startTime AND appointment.dateTime < :endTime)',
+        '(appointment.scheduledAt <= :startTime AND appointment.scheduledAt + INTERVAL appointment.duration MINUTE > :startTime) OR ' +
+        '(appointment.scheduledAt < :endTime AND appointment.scheduledAt + INTERVAL appointment.duration MINUTE >= :endTime) OR ' +
+        '(appointment.scheduledAt >= :startTime AND appointment.scheduledAt < :endTime)',
         { startTime: dateTime, endTime }
       )
       .getOne();
@@ -427,37 +450,91 @@ export class AppointmentsService {
     date: Date,
     existingAppointments: Appointment[],
     duration: number,
+    veterinarian?: any,
   ): AvailabilitySlotDto[] {
     const slots: AvailabilitySlotDto[] = [];
-    const startHour = 8; // 8 AM
-    const endHour = 18; // 6 PM
+    
+    // Si no hay veterinario, usar horarios por defecto
+    if (!veterinarian) {
+      const startHour = 8; // 8 AM
+      const endHour = 18; // 6 PM
+      const slotDuration = duration; // minutos
+
+      for (let hour = startHour; hour < endHour; hour++) {
+        for (let minute = 0; minute < 60; minute += slotDuration) {
+          const slotStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute);
+          const slotEnd = new Date(slotStart.getTime() + slotDuration * 60000);
+
+          // Verificar si hay conflicto con citas existentes
+          const hasConflict = existingAppointments.some(appointment => {
+            const appointmentStart = new Date(appointment.scheduledAt);
+            const appointmentEnd = new Date(appointmentStart.getTime() + appointment.duration * 60000);
+            
+            return slotStart < appointmentEnd && slotEnd > appointmentStart;
+          });
+
+          slots.push({
+            startTime: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+            endTime: `${slotEnd.getHours().toString().padStart(2, '0')}:${slotEnd.getMinutes().toString().padStart(2, '0')}`,
+            dateTime: slotStart.toISOString(),
+            available: !hasConflict,
+            reason: hasConflict ? 'Cita ya programada' : undefined,
+          });
+        }
+      }
+      
+      return slots;
+    }
+
+    // Obtener el día de la semana
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[date.getDay()];
+    
+    // Obtener configuración de horarios del veterinario
+    const availabilityHours = veterinarian.availabilityHours || {};
+    const dayConfig = availabilityHours[dayName];
+    
+    // Si el día no está configurado o no está disponible, retornar array vacío
+    if (!dayConfig || !dayConfig.isAvailable) {
+      return [];
+    }
+
+    // Parsear horas de inicio y fin
+    const [startHour, startMinute] = dayConfig.start.split(':').map(Number);
+    const [endHour, endMinute] = dayConfig.end.split(':').map(Number);
+    
+    const startTime = startHour * 60 + startMinute; // minutos desde medianoche
+    const endTime = endHour * 60 + endMinute; // minutos desde medianoche
     const slotDuration = duration; // minutos
 
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += slotDuration) {
-        const slotStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute);
-        const slotEnd = new Date(slotStart.getTime() + slotDuration * 60000);
-
-        // Verificar si hay conflicto con citas existentes
-        const hasConflict = existingAppointments.some(appointment => {
-          const appointmentStart = new Date(appointment.dateTime);
-          const appointmentEnd = new Date(appointmentStart.getTime() + appointment.durationMinutes * 60000);
-          
-          return (
-            (slotStart >= appointmentStart && slotStart < appointmentEnd) ||
-            (slotEnd > appointmentStart && slotEnd <= appointmentEnd) ||
-            (slotStart <= appointmentStart && slotEnd >= appointmentEnd)
-          );
-        });
-
-        slots.push({
-          startTime: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-          endTime: `${slotEnd.getHours().toString().padStart(2, '0')}:${slotEnd.getMinutes().toString().padStart(2, '0')}`,
-          dateTime: slotStart.toISOString(),
-          available: !hasConflict,
-          reason: hasConflict ? 'Cita ya programada' : undefined,
-        });
+    // Generar slots dentro del horario disponible
+    for (let currentTime = startTime; currentTime < endTime; currentTime += slotDuration) {
+      const hour = Math.floor(currentTime / 60);
+      const minute = currentTime % 60;
+      
+      // Verificar que no se pase del horario de fin
+      if (currentTime + slotDuration > endTime) {
+        break;
       }
+
+      const slotStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute);
+      const slotEnd = new Date(slotStart.getTime() + slotDuration * 60000);
+
+      // Verificar si hay conflicto con citas existentes
+      const hasConflict = existingAppointments.some(appointment => {
+        const appointmentStart = new Date(appointment.scheduledAt);
+        const appointmentEnd = new Date(appointmentStart.getTime() + appointment.duration * 60000);
+        
+        return slotStart < appointmentEnd && slotEnd > appointmentStart;
+      });
+
+      slots.push({
+        startTime: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+        endTime: `${slotEnd.getHours().toString().padStart(2, '0')}:${slotEnd.getMinutes().toString().padStart(2, '0')}`,
+        dateTime: slotStart.toISOString(),
+        available: !hasConflict,
+        reason: hasConflict ? 'Cita ya programada' : undefined,
+      });
     }
 
     return slots;
@@ -507,31 +584,31 @@ export class AppointmentsService {
 
     if (query.dateFrom || query.dateTo) {
       if (query.dateFrom && query.dateTo) {
-        queryBuilder.andWhere('DATE(appointment.dateTime) BETWEEN :dateFrom AND :dateTo', {
+        queryBuilder.andWhere('DATE(appointment.scheduledAt) BETWEEN :dateFrom AND :dateTo', {
           dateFrom: query.dateFrom,
           dateTo: query.dateTo,
         });
       } else if (query.dateFrom) {
-        queryBuilder.andWhere('DATE(appointment.dateTime) >= :dateFrom', {
+        queryBuilder.andWhere('DATE(appointment.scheduledAt) >= :dateFrom', {
           dateFrom: query.dateFrom,
         });
       } else if (query.dateTo) {
-        queryBuilder.andWhere('DATE(appointment.dateTime) <= :dateTo', {
+        queryBuilder.andWhere('DATE(appointment.scheduledAt) <= :dateTo', {
           dateTo: query.dateTo,
         });
       }
     }
 
     if (query.date) {
-      queryBuilder.andWhere('DATE(appointment.dateTime) = :date', { date: query.date });
+      queryBuilder.andWhere('DATE(appointment.scheduledAt) = :date', { date: query.date });
     }
 
     if (query.upcoming) {
-      queryBuilder.andWhere('appointment.dateTime > :now', { now: new Date() });
+      queryBuilder.andWhere('appointment.scheduledAt > :now', { now: new Date() });
     }
 
     if (query.past) {
-      queryBuilder.andWhere('appointment.dateTime < :now', { now: new Date() });
+      queryBuilder.andWhere('appointment.scheduledAt < :now', { now: new Date() });
     }
   }
 
@@ -544,8 +621,8 @@ export class AppointmentsService {
   ): void {
     const { sortBy, sortOrder } = query;
     
-    const allowedSortFields = ['dateTime', 'status', 'createdAt', 'updatedAt'];
-    const field = allowedSortFields.includes(sortBy) ? sortBy : 'dateTime';
+    const allowedSortFields = ['scheduledAt', 'status', 'createdAt', 'updatedAt'];
+    const field = allowedSortFields.includes(sortBy) ? sortBy : 'scheduledAt';
     
     queryBuilder.orderBy(`appointment.${field}`, sortOrder);
   }
@@ -582,7 +659,7 @@ export class AppointmentsService {
     await this.validateTimeSlotAvailability(
       appointment.veterinarianId,
       newDateTime,
-      appointment.durationMinutes,
+      appointment.duration,
     );
   }
 } 

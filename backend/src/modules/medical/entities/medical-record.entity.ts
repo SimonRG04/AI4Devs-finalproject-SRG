@@ -21,6 +21,9 @@ export class MedicalRecord {
   @Column({ name: 'appointment_id' })
   appointmentId: number;
 
+  @Column({ nullable: true, length: 200 })
+  title?: string;
+
   @Column({ type: 'text' })
   @IsNotEmpty()
   diagnosis: string;
@@ -33,6 +36,12 @@ export class MedicalRecord {
 
   @Column({ type: 'text', nullable: true })
   symptoms?: string;
+
+  @Column({ type: 'decimal', precision: 4, scale: 2, nullable: true })
+  temperature?: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  weight?: number;
 
   @Column({ name: 'follow_up_date', type: 'date', nullable: true })
   followUpDate?: Date;

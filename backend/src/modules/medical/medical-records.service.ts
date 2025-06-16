@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder, DataSource } from 'typeorm';
 import { MedicalRecord } from './entities/medical-record.entity';
 import { Prescription } from './entities/prescription.entity';
-import { Appointment } from '../appointments/entities/appointment.entity';
+import { Appointment, AppointmentStatus } from '../appointments/entities/appointment.entity';
 import { Pet } from '../pets/entities/pet.entity';
 import { CreateMedicalRecordDto } from './dto/create-medical-record.dto';
 import { UpdateMedicalRecordDto } from './dto/update-medical-record.dto';
@@ -49,14 +49,42 @@ export class MedicalRecordsService {
     createMedicalRecordDto: CreateMedicalRecordDto,
     currentUser: any,
   ): Promise<MedicalRecordResponseDto> {
-    this.logger.log(`Creating medical record for appointment ${createMedicalRecordDto.appointmentId}`);
+    let appointmentId = createMedicalRecordDto.appointmentId;
+
+    // Si no se proporciona appointmentId pero sí petId, buscar o crear una cita
+    if (!appointmentId && createMedicalRecordDto.petId) {
+      this.logger.log(`Creating medical record for pet ${createMedicalRecordDto.petId}`);
+      
+      // Validar acceso a la mascota
+      await this.validatePetAccess(createMedicalRecordDto.petId, currentUser);
+      
+      // Para el caso de petId, podemos crear un registro médico sin cita específica
+      // o buscar la cita más reciente de la mascota
+      const recentAppointment = await this.appointmentRepository.findOne({
+        where: { 
+          petId: createMedicalRecordDto.petId,
+          status: AppointmentStatus.COMPLETED // Solo citas completadas
+        },
+        order: { scheduledAt: 'DESC' }
+      });
+
+      if (recentAppointment) {
+        appointmentId = recentAppointment.id;
+      } else {
+        throw new BadRequestException('No se encontró una cita completada para esta mascota. Debe especificar un appointmentId.');
+      }
+    } else if (!appointmentId) {
+      throw new BadRequestException('Debe proporcionar appointmentId o petId');
+    }
+
+    this.logger.log(`Creating medical record for appointment ${appointmentId}`);
 
     // Validar que la cita existe y el usuario tiene acceso
-    await this.validateAppointmentAccess(createMedicalRecordDto.appointmentId, currentUser);
+    await this.validateAppointmentAccess(appointmentId, currentUser);
 
     // Verificar que no exista ya un registro médico para esta cita
     const existingRecord = await this.medicalRecordRepository.findOne({
-      where: { appointmentId: createMedicalRecordDto.appointmentId },
+      where: { appointmentId },
     });
 
     if (existingRecord) {
@@ -70,11 +98,12 @@ export class MedicalRecordsService {
 
     try {
       // Crear el registro médico
-      const { prescriptions, ...recordData } = createMedicalRecordDto;
+      const { prescriptions, petId, ...recordData } = createMedicalRecordDto;
       
       // Convertir fechas string a Date
       const medicalRecord = this.medicalRecordRepository.create({
         ...recordData,
+        appointmentId,
         followUpDate: recordData.followUpDate ? new Date(recordData.followUpDate) : undefined,
       });
 
@@ -84,16 +113,23 @@ export class MedicalRecordsService {
       // Crear prescripciones si se proporcionaron
       if (prescriptions && prescriptions.length > 0) {
         for (const prescriptionDto of prescriptions) {
+          // Procesar medicationName si se proporciona en lugar de medication
+          const medication = prescriptionDto.medication || prescriptionDto.medicationName;
+          if (!medication) {
+            throw new BadRequestException('Debe proporcionar medication o medicationName en las prescripciones');
+          }
+
           const prescription = this.prescriptionRepository.create({
             ...prescriptionDto,
+            medication,
             medicalRecordId: savedRecord.id,
-            startDate: new Date(prescriptionDto.startDate),
+            startDate: prescriptionDto.startDate ? new Date(prescriptionDto.startDate) : new Date(),
             endDate: prescriptionDto.endDate ? new Date(prescriptionDto.endDate) : undefined,
           });
 
           // Calcular fecha de fin si se proporcionó duración
           if (prescriptionDto.durationDays && !prescriptionDto.endDate) {
-            const startDate = new Date(prescriptionDto.startDate);
+            const startDate = prescription.startDate;
             const endDate = new Date(startDate.getTime() + prescriptionDto.durationDays * 24 * 60 * 60 * 1000);
             prescription.endDate = endDate;
           }

@@ -72,7 +72,7 @@
                   </div>
                   <div>
                     <h5 class="text-sm font-medium text-gray-500">Edad</h5>
-                    <p class="mt-1 text-sm text-gray-900">{{ calculateAge(pet.birth_date) }}</p>
+                    <p class="mt-1 text-sm text-gray-900">{{ calculateAge(pet.birthDate) }}</p>
                   </div>
                   <div>
                     <h5 class="text-sm font-medium text-gray-500">Peso</h5>
@@ -84,11 +84,11 @@
                   </div>
                   <div>
                     <h5 class="text-sm font-medium text-gray-500">Microchip</h5>
-                    <p class="mt-1 text-sm text-gray-900">{{ pet.microchip_id || 'No tiene' }}</p>
+                    <p class="mt-1 text-sm text-gray-900">{{ pet.microchipId || 'No tiene' }}</p>
                   </div>
                   <div>
                     <h5 class="text-sm font-medium text-gray-500">Esterilizado</h5>
-                    <p class="mt-1 text-sm text-gray-900">{{ pet.is_neutered ? 'Sí' : 'No' }}</p>
+                    <p class="mt-1 text-sm text-gray-900">{{ pet.isNeutered ? 'Sí' : 'No' }}</p>
                   </div>
                 </div>
 
@@ -177,8 +177,8 @@
             >
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-sm font-medium text-gray-900">{{ appointment.reason }}</p>
-                  <p class="text-sm text-gray-500">{{ formatDate(appointment.dateTime) }}</p>
+                  <p class="text-sm font-medium text-gray-900">{{ appointment.type }}</p>
+                  <p class="text-sm text-gray-500">{{ formatDate(appointment.scheduledAt) }}</p>
                 </div>
                 <span
                   :class="[
@@ -247,7 +247,7 @@ const loadPetDetails = async () => {
     
     // Load pet details and recent appointments in parallel
     const [petResponse, appointmentsResponse] = await Promise.all([
-      petService.getPetById(petId),
+      petService.getPet(petId),
       petService.getPetAppointments ? petService.getPetAppointments(petId) : Promise.resolve([])
     ])
     

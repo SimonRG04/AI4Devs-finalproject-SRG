@@ -434,7 +434,22 @@ const loadAvailableSlots = async () => {
     const dateString = format(selectedDate.value, 'yyyy-MM-dd')
     const response = await appointmentService.getAvailableSlots(selectedVeterinarianId.value, dateString)
     
-    availableSlots.value = response.data || response || []
+    // La respuesta del backend tiene esta estructura: { veterinarianId, name, specialty, date, slots, totalAvailableSlots }
+    // Necesitamos extraer solo los slots
+    const responseData = response.data || response
+    if (responseData && responseData.slots) {
+      // Mapear los slots para que tengan la estructura esperada por el frontend
+      availableSlots.value = responseData.slots.map(slot => ({
+        time: slot.startTime,
+        available: slot.available,
+        dateTime: slot.dateTime,
+        reason: slot.reason
+      }))
+    } else {
+      availableSlots.value = []
+    }
+    
+    console.log('Available slots loaded:', availableSlots.value)
     
   } catch (error) {
     console.error('Error loading available slots:', error)

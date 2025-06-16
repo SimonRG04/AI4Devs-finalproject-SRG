@@ -23,6 +23,24 @@ export enum AppointmentStatus {
   MISSED = 'MISSED',
 }
 
+export enum AppointmentType {
+  CONSULTATION = 'CONSULTATION',
+  VACCINATION = 'VACCINATION',
+  SURGERY = 'SURGERY',
+  EMERGENCY = 'EMERGENCY',
+  CHECKUP = 'CHECKUP',
+  GROOMING = 'GROOMING',
+  DENTAL = 'DENTAL',
+  OTHER = 'OTHER',
+}
+
+export enum AppointmentPriority {
+  LOW = 'LOW',
+  NORMAL = 'NORMAL',
+  HIGH = 'HIGH',
+  URGENT = 'URGENT',
+}
+
 @Entity('appointments')
 export class Appointment {
   @PrimaryGeneratedColumn()
@@ -34,9 +52,17 @@ export class Appointment {
   @Column({ name: 'veterinarian_id' })
   veterinarianId: number;
 
-  @Column({ name: 'date_time', type: 'timestamp' })
+  @Column({ name: 'scheduled_at', type: 'timestamp' })
   @IsDateString()
-  dateTime: Date;
+  scheduledAt: Date;
+
+  @Column({
+    type: 'enum',
+    enum: AppointmentType,
+    default: AppointmentType.CONSULTATION,
+  })
+  @IsEnum(AppointmentType)
+  type: AppointmentType;
 
   @Column({
     type: 'enum',
@@ -46,15 +72,19 @@ export class Appointment {
   @IsEnum(AppointmentStatus)
   status: AppointmentStatus;
 
-  @Column()
-  @IsNotEmpty()
-  reason: string;
+  @Column({
+    type: 'enum',
+    enum: AppointmentPriority,
+    default: AppointmentPriority.NORMAL,
+  })
+  @IsEnum(AppointmentPriority)
+  priority: AppointmentPriority;
 
   @Column({ type: 'text', nullable: true })
   notes?: string;
 
-  @Column({ name: 'duration_minutes', default: 30 })
-  durationMinutes: number;
+  @Column({ default: 30 })
+  duration: number;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
@@ -79,10 +109,10 @@ export class Appointment {
 
   // Métodos helper
   get isUpcoming(): boolean {
-    return this.dateTime > new Date() && this.status === AppointmentStatus.SCHEDULED;
+    return this.scheduledAt > new Date() && this.status === AppointmentStatus.SCHEDULED;
   }
 
   get isPast(): boolean {
-    return this.dateTime < new Date();
+    return this.scheduledAt < new Date();
   }
 } 

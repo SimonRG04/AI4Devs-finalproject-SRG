@@ -48,7 +48,7 @@ const petService = {
 
   // Obtener historial médico de una mascota
   async getPetMedicalHistory(petId) {
-    const response = await apiClient.get(`/pets/${petId}/medical-records`)
+    const response = await apiClient.get(`/medical-records/pet/${petId}`)
     return response.data
   },
 
@@ -61,6 +61,23 @@ const petService = {
   // Obtener vacunas de una mascota
   async getPetVaccinations(petId) {
     const response = await apiClient.get(`/pets/${petId}/vaccinations`)
+    return response.data
+  },
+
+  // Buscar mascotas para veterinarios (por nombre de mascota o propietario)
+  async searchPets(searchOptions = {}) {
+    const params = {}
+    if (searchOptions.query) params.search = searchOptions.query
+    if (searchOptions.includeOwner) params.includeOwner = true
+    if (searchOptions.limit) params.limit = searchOptions.limit || 10
+    
+    const response = await apiClient.get('/pets', { params })
+    return response.data
+  },
+
+  // Obtener mis mascotas (para clientes)
+  async getMyPets() {
+    const response = await apiClient.get('/pets/my-pets')
     return response.data
   }
 }

@@ -16,15 +16,36 @@ import { Transform, Type } from 'class-transformer';
 import { CreatePrescriptionDto } from './create-prescription.dto';
 
 export class CreateMedicalRecordDto {
-  @ApiProperty({
-    description: 'ID de la cita asociada al registro médico',
+  @ApiPropertyOptional({
+    description: 'ID de la cita asociada al registro médico (opcional si se proporciona petId)',
     example: 1,
   })
-  @IsNotEmpty({ message: 'El ID de la cita es obligatorio' })
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({}, { message: 'El ID de la cita debe ser un número' })
   @IsPositive({ message: 'El ID de la cita debe ser positivo' })
-  appointmentId: number;
+  appointmentId?: number;
+
+  @ApiPropertyOptional({
+    description: 'ID de la mascota (alternativo a appointmentId)',
+    example: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'El ID de la mascota debe ser un número' })
+  @IsPositive({ message: 'El ID de la mascota debe ser positivo' })
+  petId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Título del registro médico',
+    example: 'Consulta general',
+    maxLength: 200,
+  })
+  @IsOptional()
+  @IsString({ message: 'El título debe ser texto' })
+  @MaxLength(200, { message: 'El título no puede exceder los 200 caracteres' })
+  @Transform(({ value }) => value?.trim())
+  title?: string;
 
   @ApiProperty({
     description: 'Diagnóstico principal del paciente',
@@ -62,6 +83,29 @@ export class CreateMedicalRecordDto {
   @MaxLength(1500, { message: 'Los síntomas no pueden exceder los 1500 caracteres' })
   @Transform(({ value }) => value?.trim())
   symptoms?: string;
+
+  @ApiPropertyOptional({
+    description: 'Temperatura corporal en grados Celsius',
+    example: 38.5,
+    minimum: 35,
+    maximum: 45,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'La temperatura debe ser un número' })
+  temperature?: number;
+
+  @ApiPropertyOptional({
+    description: 'Peso actual de la mascota en kilogramos',
+    example: 25.3,
+    minimum: 0.1,
+    maximum: 500,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'El peso debe ser un número' })
+  @IsPositive({ message: 'El peso debe ser positivo' })
+  weight?: number;
 
   @ApiPropertyOptional({
     description: 'Notas adicionales del veterinario',

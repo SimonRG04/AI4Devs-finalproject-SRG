@@ -1,6 +1,6 @@
 <template>
   <div class="pet-form">
-    <Form @submit="onSubmit" :validation-schema="schema" v-slot="{ errors, isSubmitting }">
+    <Form @submit="onSubmit" :validation-schema="schema" :initial-values="initialValues" v-slot="{ errors, isSubmitting }">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Información Básica -->
         <div class="space-y-4">
@@ -93,16 +93,16 @@
 
           <!-- Fecha de Nacimiento -->
           <div>
-            <label for="birth_date" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="birthDate" class="block text-sm font-medium text-gray-700 mb-1">
               Fecha de Nacimiento *
             </label>
             <Field
-              name="birth_date"
+              name="birthDate"
               type="date"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
-              :class="{ 'border-red-500': errors.birth_date }"
+              :class="{ 'border-red-500': errors.birthDate }"
             />
-            <ErrorMessage name="birth_date" class="text-red-500 text-sm mt-1" />
+            <ErrorMessage name="birthDate" class="text-red-500 text-sm mt-1" />
           </div>
 
           <!-- Peso -->
@@ -142,11 +142,11 @@
 
           <!-- Microchip -->
           <div>
-            <label for="microchip_id" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="microchipId" class="block text-sm font-medium text-gray-700 mb-1">
               ID Microchip
             </label>
             <Field
-              name="microchip_id"
+              name="microchipId"
               type="text"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
               placeholder="Número de microchip"
@@ -157,7 +157,7 @@
           <div>
             <label class="flex items-center">
               <Field
-                name="is_neutered"
+                name="isNeutered"
                 type="checkbox"
                 class="h-4 w-4 text-vet-600 focus:ring-vet-500 border-gray-300 rounded"
               />
@@ -167,11 +167,11 @@
 
           <!-- Condiciones Médicas -->
           <div>
-            <label for="medical_conditions" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="medicalConditions" class="block text-sm font-medium text-gray-700 mb-1">
               Condiciones Médicas
             </label>
             <Field
-              name="medical_conditions"
+              name="medicalConditions"
               as="textarea"
               rows="3"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
@@ -195,11 +195,11 @@
 
           <!-- Alertas Médicas -->
           <div>
-            <label for="medical_alerts" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="medicalAlerts" class="block text-sm font-medium text-gray-700 mb-1">
               Alertas Médicas
             </label>
             <Field
-              name="medical_alerts"
+              name="medicalAlerts"
               as="textarea"
               rows="2"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
@@ -209,16 +209,16 @@
 
           <!-- URL de Foto -->
           <div>
-            <label for="photo_url" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="photoUrl" class="block text-sm font-medium text-gray-700 mb-1">
               URL de Foto
             </label>
             <Field
-              name="photo_url"
+              name="photoUrl"
               type="url"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
               placeholder="https://ejemplo.com/foto.jpg"
             />
-            <ErrorMessage name="photo_url" class="text-red-500 text-sm mt-1" />
+            <ErrorMessage name="photoUrl" class="text-red-500 text-sm mt-1" />
           </div>
 
           <!-- Notas -->
@@ -304,7 +304,7 @@ const schema = yup.object({
     .required('El sexo es obligatorio')
     .oneOf(['MALE', 'FEMALE'], 'Sexo no válido'),
   
-  birth_date: yup
+  birthDate: yup
     .date()
     .required('La fecha de nacimiento es obligatoria')
     .max(new Date(), 'La fecha de nacimiento no puede ser futura'),
@@ -319,13 +319,13 @@ const schema = yup.object({
     .string()
     .max(30, 'El color no puede exceder 30 caracteres'),
   
-  microchip_id: yup
+  microchipId: yup
     .string()
     .max(20, 'El ID del microchip no puede exceder 20 caracteres'),
   
-  is_neutered: yup.boolean(),
+  isNeutered: yup.boolean(),
   
-  medical_conditions: yup
+  medicalConditions: yup
     .string()
     .max(500, 'Las condiciones médicas no pueden exceder 500 caracteres'),
   
@@ -333,11 +333,11 @@ const schema = yup.object({
     .string()
     .max(300, 'Las alergias no pueden exceder 300 caracteres'),
   
-  medical_alerts: yup
+  medicalAlerts: yup
     .string()
     .max(300, 'Las alertas médicas no pueden exceder 300 caracteres'),
   
-  photo_url: yup
+  photoUrl: yup
     .string()
     .url('Debe ser una URL válida'),
   
@@ -352,36 +352,61 @@ const onSubmit = (values) => {
   const formData = {
     ...values,
     weight: parseFloat(values.weight),
-    is_neutered: Boolean(values.is_neutered),
-    is_active: true // Por defecto activo
+    isNeutered: Boolean(values.isNeutered)
   }
   
   emit('save', formData)
 }
 
 // Initialize form with pet data if editing
+const initialValues = ref({})
+
 const initializeForm = () => {
   if (props.pet) {
-    // El formulario se inicializará automáticamente con los valores del prop
-    return {
+    initialValues.value = {
       name: props.pet.name || '',
       species: props.pet.species || '',
       breed: props.pet.breed || '',
       gender: props.pet.gender || '',
-      birth_date: props.pet.birth_date ? props.pet.birth_date.split('T')[0] : '',
+      birthDate: props.pet.birthDate ? props.pet.birthDate.split('T')[0] : '',
       weight: props.pet.weight || '',
       color: props.pet.color || '',
-      microchip_id: props.pet.microchip_id || '',
-      is_neutered: props.pet.is_neutered || false,
-      medical_conditions: props.pet.medical_conditions || '',
+      microchipId: props.pet.microchipId || '',
+      isNeutered: props.pet.isNeutered || false,
+      medicalConditions: props.pet.medicalConditions || '',
       allergies: props.pet.allergies || '',
-      medical_alerts: props.pet.medical_alerts || '',
-      photo_url: props.pet.photo_url || '',
+      medicalAlerts: props.pet.medicalAlerts || '',
+      photoUrl: props.pet.photoUrl || '',
       notes: props.pet.notes || ''
     }
+  } else {
+    initialValues.value = {
+      name: '',
+      species: '',
+      breed: '',
+      gender: '',
+      birthDate: '',
+      weight: '',
+      color: '',
+      microchipId: '',
+      isNeutered: false,
+      medicalConditions: '',
+      allergies: '',
+      medicalAlerts: '',
+      photoUrl: '',
+      notes: ''
+    }
   }
-  return {}
 }
+
+// Watch for changes in pet prop
+watch(() => props.pet, () => {
+  initializeForm()
+}, { immediate: true })
+
+onMounted(() => {
+  initializeForm()
+})
 </script>
 
 <style scoped>

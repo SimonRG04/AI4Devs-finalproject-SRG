@@ -148,6 +148,27 @@ export class PetsController {
     return this.petsService.findByClient(clientId, user);
   }
 
+  @Get('my-pets')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({
+    summary: 'Obtener mis mascotas',
+    description: 'Obtiene todas las mascotas del cliente autenticado',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Mascotas obtenidas exitosamente',
+    type: [PetResponseDto],
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'No autorizado',
+  })
+  async getMyPets(
+    @CurrentUser() user: any,
+  ): Promise<Pet[]> {
+    return this.petsService.findByClient(user.clientId, user);
+  }
+
   @Get(':id')
   @Roles(UserRole.CLIENT, UserRole.VET, UserRole.ADMIN)
   @ApiOperation({
@@ -177,6 +198,50 @@ export class PetsController {
     @CurrentUser() user: any,
   ): Promise<Pet> {
     return this.petsService.findOne(id, user);
+  }
+
+  @Get(':id/appointments')
+  @Roles(UserRole.CLIENT, UserRole.VET, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Obtener citas de una mascota',
+    description: 'Obtiene todas las citas de una mascota específica',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de la mascota',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Número de página',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Registros por página',
+    example: 10,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Citas de la mascota obtenidas exitosamente',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'No tienes acceso a esta mascota',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Mascota no encontrada',
+  })
+  async getPetAppointments(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    @CurrentUser() user: any,
+  ) {
+    return this.petsService.getPetAppointments(id, { page, limit }, user);
   }
 
   @Patch(':id')

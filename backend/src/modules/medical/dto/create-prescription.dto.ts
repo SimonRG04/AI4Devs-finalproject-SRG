@@ -27,7 +27,20 @@ export class CreatePrescriptionDto {
   @MinLength(2, { message: 'El medicamento debe tener al menos 2 caracteres' })
   @MaxLength(200, { message: 'El medicamento no puede exceder los 200 caracteres' })
   @Transform(({ value }) => value?.trim())
-  medication: string;
+  medication?: string;
+
+  @ApiPropertyOptional({
+    description: 'Nombre del medicamento prescrito (alias para medication)',
+    example: 'Amoxicilina',
+    minLength: 2,
+    maxLength: 200,
+  })
+  @IsOptional()
+  @IsString({ message: 'El medicamento debe ser texto' })
+  @MinLength(2, { message: 'El medicamento debe tener al menos 2 caracteres' })
+  @MaxLength(200, { message: 'El medicamento no puede exceder los 200 caracteres' })
+  @Transform(({ value }) => value?.trim())
+  medicationName?: string;
 
   @ApiProperty({
     description: 'Dosis del medicamento',
@@ -42,24 +55,34 @@ export class CreatePrescriptionDto {
   @Transform(({ value }) => value?.trim())
   dosage: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Frecuencia de administración',
-    enum: PrescriptionFrequency,
-    example: PrescriptionFrequency.TWICE_DAILY,
+    example: 'TWICE_DAILY',
   })
-  @IsNotEmpty({ message: 'La frecuencia es obligatoria' })
-  @IsEnum(PrescriptionFrequency, { message: 'La frecuencia debe ser válida' })
-  frequency: PrescriptionFrequency;
+  @IsOptional()
+  @Transform(({ value }) => {
+    // Si viene como string, intentar convertir a enum
+    if (typeof value === 'string') {
+      const enumValue = Object.values(PrescriptionFrequency).find(
+        freq => freq === value.toUpperCase() || 
+               freq.replace(/_/g, ' ').toLowerCase() === value.toLowerCase()
+      );
+      return enumValue || PrescriptionFrequency.TWICE_DAILY;
+    }
+    return value || PrescriptionFrequency.TWICE_DAILY;
+  })
+  frequency?: PrescriptionFrequency = PrescriptionFrequency.TWICE_DAILY;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Fecha de inicio del tratamiento',
     example: '2025-06-03',
     type: 'string',
     format: 'date',
   })
-  @IsNotEmpty({ message: 'La fecha de inicio es obligatoria' })
+  @IsOptional()
   @IsDateString({}, { message: 'La fecha de inicio debe ser válida' })
-  startDate: string;
+  @Transform(({ value }) => value || new Date().toISOString().split('T')[0])
+  startDate?: string;
 
   @ApiPropertyOptional({
     description: 'Fecha de finalización del tratamiento',

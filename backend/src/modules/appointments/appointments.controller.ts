@@ -190,6 +190,45 @@ export class AppointmentsController {
     return this.appointmentsService.getVeterinarianAvailability(veterinarianId, query);
   }
 
+  @Get('my-appointments')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({
+    summary: 'Obtener mis citas',
+    description: 'Obtiene todas las citas del cliente autenticado con filtros opcionales',
+  })
+  @ApiQuery({
+    name: 'status',
+    description: 'Filtrar por estado de la cita',
+    example: 'SCHEDULED',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Límite de resultados',
+    example: 10,
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Citas obtenidas exitosamente',
+    type: [AppointmentResponseDto],
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'No autorizado',
+  })
+  async getMyAppointments(
+    @Query() query: AppointmentsQueryDto,
+    @CurrentUser() user: any,
+  ): Promise<PaginatedResponse<Appointment>> {
+    // Filtrar solo las citas del cliente autenticado
+    const clientQuery = {
+      ...query,
+      clientId: user.clientId,
+    };
+    return this.appointmentsService.findAll(clientQuery, user);
+  }
+
   @Get(':id')
   @Roles(UserRole.CLIENT, UserRole.VET, UserRole.ADMIN)
   @ApiOperation({

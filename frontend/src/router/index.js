@@ -81,6 +81,13 @@ const routes = [
     props: true
   },
   {
+    path: '/client/pets/:id/edit',
+    name: 'client-pet-edit',
+    component: () => import('../views/client/PetEditView.vue'),
+    meta: { requiresAuth: true, roles: ['CLIENT'] },
+    props: true
+  },
+  {
     path: '/client/pets/:id/medical-history',
     name: 'client-medical-history',
     component: ClientMedicalHistoryView,

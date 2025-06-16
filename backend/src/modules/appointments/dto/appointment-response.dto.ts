@@ -31,7 +31,7 @@ export class AppointmentResponseDto {
     format: 'date-time',
   })
   @Expose()
-  dateTime: Date;
+  scheduledAt: Date;
 
   @ApiProperty({
     description: 'Estado de la cita',
@@ -42,11 +42,18 @@ export class AppointmentResponseDto {
   status: AppointmentStatus;
 
   @ApiProperty({
-    description: 'Motivo de la cita',
-    example: 'Consulta de rutina y vacunación',
+    description: 'Tipo de cita',
+    example: 'CONSULTATION',
   })
   @Expose()
-  reason: string;
+  type: string;
+
+  @ApiProperty({
+    description: 'Prioridad de la cita',
+    example: 'NORMAL',
+  })
+  @Expose()
+  priority: string;
 
   @ApiPropertyOptional({
     description: 'Notas adicionales',
@@ -60,7 +67,7 @@ export class AppointmentResponseDto {
     example: 30,
   })
   @Expose()
-  durationMinutes: number;
+  duration: number;
 
   @ApiProperty({
     description: 'Fecha de creación',
@@ -119,7 +126,7 @@ export class AppointmentResponseDto {
     example: true,
   })
   @Expose()
-  @Transform(({ obj }) => new Date(obj.dateTime) > new Date())
+  @Transform(({ obj }) => new Date(obj.scheduledAt) > new Date())
   isUpcoming?: boolean;
 
   @ApiPropertyOptional({
@@ -127,6 +134,6 @@ export class AppointmentResponseDto {
     example: false,
   })
   @Expose()
-  @Transform(({ obj }) => new Date(obj.dateTime) < new Date())
+  @Transform(({ obj }) => new Date(obj.scheduledAt) < new Date())
   isPast?: boolean;
 } 

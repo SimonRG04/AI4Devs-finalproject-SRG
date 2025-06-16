@@ -85,7 +85,7 @@
           <h3 class="text-lg font-medium text-gray-900 mb-4">Acciones Rápidas</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <router-link
-              to="/pets/add"
+              to="/client/pets"
               class="group relative bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-500 rounded-lg shadow hover:shadow-md transition-shadow"
             >
               <div>
@@ -108,7 +108,7 @@
             </router-link>
 
             <router-link
-              to="/appointments/book"
+              to="/client/appointments/new"
               class="group relative bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-500 rounded-lg shadow hover:shadow-md transition-shadow"
             >
               <div>
@@ -131,7 +131,7 @@
             </router-link>
 
             <router-link
-              to="/pets"
+              to="/client/pets"
               class="group relative bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-500 rounded-lg shadow hover:shadow-md transition-shadow"
             >
               <div>
@@ -154,7 +154,7 @@
             </router-link>
 
             <router-link
-              to="/appointments"
+              to="/client/appointments"
               class="group relative bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-500 rounded-lg shadow hover:shadow-md transition-shadow"
             >
               <div>
@@ -196,7 +196,7 @@
                   Programa tu primera cita veterinaria.
                 </p>
                 <div class="mt-6">
-                  <router-link to="/appointments/book" class="btn-primary">
+                  <router-link to="/client/appointments/new" class="btn-primary">
                     Agendar Cita
                   </router-link>
                 </div>
@@ -208,11 +208,11 @@
                       <div class="flex items-center justify-between">
                         <h3 class="text-sm font-medium">{{ appointment.pet?.name }}</h3>
                         <p class="text-sm text-gray-500">
-                          {{ formatDate(appointment.dateTime) }}
+                          {{ formatDate(appointment.scheduledAt) }}
                         </p>
                       </div>
                       <p class="text-sm text-gray-500">
-                        {{ appointment.reason }}
+                        {{ appointment.type }}
                       </p>
                       <div class="flex items-center space-x-2">
                         <span class="badge badge-info">
@@ -245,7 +245,7 @@
                   Registra tu primera mascota para comenzar.
                 </p>
                 <div class="mt-6">
-                  <router-link to="/pets/add" class="btn-primary">
+                  <router-link to="/client/pets" class="btn-primary">
                     Registrar Mascota
                   </router-link>
                 </div>
@@ -268,7 +268,7 @@
                     </div>
                     <div class="flex-shrink-0">
                       <router-link
-                        :to="`/pets/${pet.id}`"
+                        :to="`/client/pets/${pet.id}`"
                         class="text-primary-600 hover:text-primary-500 text-sm font-medium"
                       >
                         Ver detalles
@@ -278,7 +278,7 @@
                 </li>
               </ul>
               <div v-if="recentPets.length > 0" class="mt-6">
-                <router-link to="/pets" class="w-full btn-secondary">
+                <router-link to="/client/pets" class="w-full btn-secondary">
                   Ver todas las mascotas
                 </router-link>
               </div>
@@ -317,7 +317,7 @@ const stats = computed(() => ({
   totalPets: recentPets.value.length,
   upcomingAppointments: upcomingAppointments.value.length,
   monthlyAppointments: upcomingAppointments.value.filter(appointment => {
-    const appointmentDate = new Date(appointment.dateTime)
+    const appointmentDate = new Date(appointment.scheduledAt)
     const now = new Date()
     return appointmentDate.getMonth() === now.getMonth() && 
            appointmentDate.getFullYear() === now.getFullYear()
@@ -348,21 +348,47 @@ const loadDashboardData = async () => {
   try {
     loading.value = true
     
-    // Por ahora usamos datos mock hasta implementar los servicios
-    // TODO: Reemplazar con llamadas reales a la API
+    // Cargar datos reales del cliente
+    await Promise.all([
+      loadMyPets(),
+      loadUpcomingAppointments()
+    ])
     
-    // Simular carga de citas próximas
-    upcomingAppointments.value = []
-    
-    // Simular carga de mascotas recientes
-    recentPets.value = []
-    
-    toast.success('Dashboard cargado correctamente')
   } catch (error) {
     console.error('Error loading dashboard data:', error)
     toast.error('Error al cargar los datos del dashboard')
   } finally {
     loading.value = false
+  }
+}
+
+// Cargar mascotas del cliente
+const loadMyPets = async () => {
+  try {
+    // Importar el servicio dinámicamente
+    const petService = (await import('../services/petService')).default
+    const response = await petService.getMyPets()
+    recentPets.value = response.data || response || []
+  } catch (error) {
+    console.error('Error loading pets:', error)
+    recentPets.value = []
+  }
+}
+
+// Cargar citas próximas del cliente
+const loadUpcomingAppointments = async () => {
+  try {
+    // Importar el servicio dinámicamente
+    const appointmentService = (await import('../services/appointmentService')).default
+    const response = await appointmentService.getAppointments({
+      myAppointments: true,
+      status: 'SCHEDULED',
+      limit: 5
+    })
+    upcomingAppointments.value = response.data || response || []
+  } catch (error) {
+    console.error('Error loading appointments:', error)
+    upcomingAppointments.value = []
   }
 }
 

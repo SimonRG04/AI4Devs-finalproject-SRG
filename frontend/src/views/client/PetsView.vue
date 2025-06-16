@@ -51,8 +51,8 @@
           <!-- Pet Image -->
           <div class="h-48 bg-gray-200 relative">
             <img
-              v-if="pet.photo_url"
-              :src="pet.photo_url"
+              v-if="pet.photoUrl"
+              :src="pet.photoUrl"
               :alt="pet.name"
               class="w-full h-full object-cover"
             />
@@ -64,10 +64,10 @@
               <span
                 :class="[
                   'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                  pet.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  pet.isActive !== false ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 ]"
               >
-                {{ pet.is_active ? 'Activo' : 'Inactivo' }}
+                {{ pet.isActive !== false ? 'Activo' : 'Inactivo' }}
               </span>
             </div>
           </div>
@@ -98,7 +98,7 @@
             <div class="space-y-2 text-sm text-gray-600">
               <div class="flex justify-between">
                 <span>Edad:</span>
-                <span>{{ calculateAge(pet.birth_date) }}</span>
+                <span>{{ calculateAge(pet.birthDate) }}</span>
               </div>
               <div class="flex justify-between">
                 <span>Peso:</span>
@@ -108,20 +108,20 @@
                 <span>Sexo:</span>
                 <span>{{ pet.gender === 'MALE' ? 'Macho' : 'Hembra' }}</span>
               </div>
-              <div v-if="pet.microchip_id" class="flex justify-between">
+              <div v-if="pet.microchipId" class="flex justify-between">
                 <span>Microchip:</span>
-                <span class="font-mono text-xs">{{ pet.microchip_id }}</span>
+                <span class="font-mono text-xs">{{ pet.microchipId }}</span>
               </div>
             </div>
 
             <!-- Medical Alerts -->
-            <div v-if="pet.medical_alerts" class="mt-4">
+            <div v-if="pet.medicalAlerts" class="mt-4">
               <div class="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                 <div class="flex">
                   <ExclamationTriangleIcon class="h-5 w-5 text-yellow-400" />
                   <div class="ml-3">
                     <h4 class="text-sm font-medium text-yellow-800">Alertas Médicas</h4>
-                    <p class="text-sm text-yellow-700">{{ pet.medical_alerts }}</p>
+                    <p class="text-sm text-yellow-700">{{ pet.medicalAlerts }}</p>
                   </div>
                 </div>
               </div>
@@ -147,19 +147,11 @@
       </div>
     </div>
 
-    <!-- Create/Edit Pet Modal -->
+    <!-- Create Pet Modal -->
     <Dialog v-model:visible="showCreateModal" modal header="Agregar Nueva Mascota" :style="{ width: '50rem' }">
       <PetForm
-        :pet="selectedPet"
+        :pet="null"
         @save="handleSavePet"
-        @cancel="closeModal"
-      />
-    </Dialog>
-
-    <Dialog v-model:visible="showEditModal" modal header="Editar Mascota" :style="{ width: '50rem' }">
-      <PetForm
-        :pet="selectedPet"
-        @save="handleUpdatePet"
         @cancel="closeModal"
       />
     </Dialog>
@@ -197,7 +189,6 @@ const toast = useToast()
 const pets = ref([])
 const loading = ref(false)
 const showCreateModal = ref(false)
-const showEditModal = ref(false)
 const selectedPet = ref(null)
 
 // Methods
@@ -215,8 +206,7 @@ const loadPets = async () => {
 }
 
 const editPet = (pet) => {
-  selectedPet.value = { ...pet }
-  showEditModal.value = true
+  router.push(`/client/pets/${pet.id}/edit`)
 }
 
 const viewPetDetails = (pet) => {
@@ -243,21 +233,8 @@ const handleSavePet = async (petData) => {
   }
 }
 
-const handleUpdatePet = async (petData) => {
-  try {
-    await petService.updatePet(selectedPet.value.id, petData)
-    toast.success('Mascota actualizada exitosamente')
-    closeModal()
-    loadPets()
-  } catch (error) {
-    console.error('Error updating pet:', error)
-    toast.error('Error al actualizar la mascota')
-  }
-}
-
 const closeModal = () => {
   showCreateModal.value = false
-  showEditModal.value = false
   selectedPet.value = null
 }
 

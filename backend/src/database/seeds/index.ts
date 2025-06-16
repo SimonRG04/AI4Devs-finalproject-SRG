@@ -6,7 +6,12 @@ import { User, UserRole } from '../../modules/users/entities/user.entity';
 import { Client } from '../../modules/users/entities/client.entity';
 import { Veterinarian } from '../../modules/users/entities/veterinarian.entity';
 import { Pet, PetSpecies, PetGender } from '../../modules/pets/entities/pet.entity';
-import { Appointment, AppointmentStatus } from '../../modules/appointments/entities/appointment.entity';
+import { 
+  Appointment, 
+  AppointmentStatus, 
+  AppointmentType, 
+  AppointmentPriority 
+} from '../../modules/appointments/entities/appointment.entity';
 
 async function runSeeds() {
   console.log('🌱 Iniciando seeds de base de datos...');
@@ -176,9 +181,12 @@ async function runSeeds() {
     const appointment1 = appointmentRepository.create({
       petId: savedPet1.id,
       veterinarianId: veterinarian1.id,
-      dateTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días desde hoy
-      reason: 'Chequeo general y vacunación',
+      scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días desde hoy
+      type: AppointmentType.CONSULTATION,
       status: AppointmentStatus.SCHEDULED,
+      duration: 30,
+      priority: AppointmentPriority.NORMAL,
+      notes: 'Chequeo general y vacunación programada',
     });
     await appointmentRepository.save(appointment1);
 
@@ -186,9 +194,12 @@ async function runSeeds() {
     const appointment2 = appointmentRepository.create({
       petId: savedPet2.id,
       veterinarianId: veterinarian2.id,
-      dateTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 días desde hoy
-      reason: 'Control dermatológico',
+      scheduledAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 días desde hoy
+      type: AppointmentType.CONSULTATION,
       status: AppointmentStatus.SCHEDULED,
+      duration: 45,
+      priority: AppointmentPriority.NORMAL,
+      notes: 'Control dermatológico y revisión de alergias',
     });
     await appointmentRepository.save(appointment2);
 

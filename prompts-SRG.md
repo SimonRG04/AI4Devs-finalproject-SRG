@@ -314,3 +314,14 @@ Podrías hacer un ajuste en esta configuración de railway para hacer la migraci
 # Prompt 10 en Cursor utilizando Claude 3.7 modo Thinking y Agent
 
 La idea es que se haga la migración y la seed cuando se despliega por primera vez el micro, por variable de entorno podemos configurar si queremos que se ejecute la migración o la seed
+
+# Prompt 11
+
+## Contexto y Rol
+Actúa como un experto senior en desarrollo de software con experiencia en arquitectura de sistemas, gestión de proyectos y evaluación técnica integral.
+## Objetivo Principal
+Realiza un análisis exhaustivo del estado actual del proyecto de desarrollo, evaluando tanto los componentes técnicos como la documentación asociada para determinar el progreso alcanzado y definir una hoja de ruta clara para la continuación del proyecto.
+
+# Prompt 12
+
+Excelente, quiero que nos enfoquemos en el frontend. Analicemos muy a profundidad @/frontend el desarrollo que hay ahora mismo implementado, que garanticemos el correcto caso de uso de cada componente y adicionalmente avancemos con el desarrollo de la funcionalidad, es decir, la idea es cubrir todo el desarrollo que llevamos a nivel de backend que pudiste visualizar en la prueba anterior y con el testing. Que garanticemos en el front toda la logica de negocio que queremos, es decir, todo el tema del dashboard, del monitreo dependiendo del rol, como usuario poder gestionar tu mascota, etc. Todo lo que está definido en las diferentes documentaciones y avances poderlo tener plasmado a nivel de frontend, conserva el estilo que venimos manejando y arquitectura con los componentes, siempre garantizando las buenas practicas. @/backend 

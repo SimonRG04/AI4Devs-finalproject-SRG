@@ -23,14 +23,14 @@
                 Dashboard
               </router-link>
               <router-link
-                to="/pets"
+                to="/client/pets"
                 class="nav-link"
                 :class="{ 'nav-link-active': route.name?.includes('pet') }"
               >
                 Mis Mascotas
               </router-link>
               <router-link
-                to="/appointments"
+                to="/client/appointments"
                 class="nav-link"
                 :class="{ 'nav-link-active': route.name?.includes('appointment') }"
               >
@@ -160,7 +160,7 @@
           </DisclosureButton>
           <DisclosureButton
             as="router-link"
-            to="/pets"
+            to="/client/pets"
             class="mobile-nav-link"
             :class="{ 'mobile-nav-link-active': route.name?.includes('pet') }"
           >
@@ -168,7 +168,7 @@
           </DisclosureButton>
           <DisclosureButton
             as="router-link"
-            to="/appointments"
+            to="/client/appointments"
             class="mobile-nav-link"
             :class="{ 'mobile-nav-link-active': route.name?.includes('appointment') }"
           >

@@ -52,12 +52,30 @@ const appointmentService = {
     return response.data
   },
 
-  // Obtener disponibilidad de horarios
-  async getAvailability(veterinarianId, date) {
-    const response = await apiClient.get(`/appointments/available-slots`, {
-      params: { veterinarianId, date }
+  // Obtener disponibilidad de horarios de un veterinario específico
+  async getVeterinarianAvailability(veterinarianId, date, duration = 30) {
+    const response = await apiClient.get(`/appointments/availability/${veterinarianId}`, {
+      params: { date, duration }
     })
     return response.data
+  },
+
+  // Obtener disponibilidad de todos los veterinarios
+  async getAllVeterinariansAvailability(date, duration = 30) {
+    const response = await apiClient.get('/appointments/availability', {
+      params: { date, duration }
+    })
+    return response.data
+  },
+
+  // Método legacy para mantener compatibilidad
+  async getAvailability(veterinarianId, date) {
+    return this.getVeterinarianAvailability(veterinarianId, date)
+  },
+
+  // Método más específico para obtener slots disponibles
+  async getAvailableSlots(veterinarianId, date, duration = 30) {
+    return this.getVeterinarianAvailability(veterinarianId, date, duration)
   },
 
   // Obtener citas del día para veterinario
@@ -71,6 +89,12 @@ const appointmentService = {
     const response = await apiClient.get('/appointments/upcoming', {
       params: { limit }
     })
+    return response.data
+  },
+
+  // Obtener mis citas (para clientes)
+  async getMyAppointments(params = {}) {
+    const response = await apiClient.get('/appointments/my-appointments', { params })
     return response.data
   }
 }

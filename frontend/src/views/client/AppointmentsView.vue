@@ -99,10 +99,10 @@
                   </div>
                   <div>
                     <h3 class="text-lg font-semibold text-gray-900">
-                      {{ appointment.reason || 'Consulta General' }}
+                      {{ appointment.type || 'Consulta General' }}
                     </h3>
                     <p class="text-sm text-gray-600">
-                      {{ formatDate(appointment.appointment_date) }} a las {{ formatTime(appointment.appointment_date) }}
+                      {{ formatDate(appointment.scheduledAt) }} a las {{ formatTime(appointment.scheduledAt) }}
                     </p>
                   </div>
                 </div>
@@ -129,9 +129,9 @@
                       </div>
                       <div>
                         <p class="text-sm font-medium text-gray-900">
-                          Dr. {{ appointment.veterinarian?.user?.first_name }} {{ appointment.veterinarian?.user?.last_name }}
+                          Dr. {{ appointment.veterinarian?.user?.firstName }} {{ appointment.veterinarian?.user?.lastName }}
                         </p>
-                        <p class="text-xs text-gray-500">{{ appointment.veterinarian?.specialty }}</p>
+                        <p class="text-xs text-gray-500">{{ appointment.veterinarian?.specialization }}</p>
                       </div>
                     </div>
                   </div>
@@ -141,7 +141,7 @@
                 <div class="flex items-center space-x-6 text-sm text-gray-600">
                   <div class="flex items-center space-x-1">
                     <ClockIcon class="w-4 h-4" />
-                    <span>{{ appointment.duration_minutes }} min</span>
+                    <span>{{ appointment.duration }} min</span>
                   </div>
                   <div v-if="appointment.notes" class="flex items-center space-x-1">
                     <DocumentTextIcon class="w-4 h-4" />
@@ -303,8 +303,21 @@ const cancelling = ref(false)
 const loadAppointments = async () => {
   try {
     loading.value = true
-    const response = await appointmentService.getMyAppointments(selectedStatus.value)
+    
+    const params = {}
+    if (selectedStatus.value) params.status = selectedStatus.value
+    if (dateFrom.value) params.dateFrom = dateFrom.value
+    if (dateTo.value) params.dateTo = dateTo.value
+    params.page = currentPage.value
+    params.limit = 10
+    
+    const response = await appointmentService.getMyAppointments(params)
     appointments.value = response.data || response
+    
+    // Actualizar información de paginación si está disponible
+    if (response.totalPages) {
+      totalPages.value = response.totalPages
+    }
   } catch (error) {
     console.error('Error loading appointments:', error)
     toast.error('Error al cargar las citas')
@@ -345,12 +358,12 @@ const getStatusText = (status) => {
 
 const canReschedule = (appointment) => {
   return ['SCHEDULED', 'CONFIRMED'].includes(appointment.status) && 
-         new Date(appointment.appointment_date) > new Date()
+         new Date(appointment.scheduledAt) > new Date()
 }
 
 const canCancel = (appointment) => {
   return ['SCHEDULED', 'CONFIRMED'].includes(appointment.status) && 
-         new Date(appointment.appointment_date) > new Date()
+         new Date(appointment.scheduledAt) > new Date()
 }
 
 const rescheduleAppointment = (appointment) => {
