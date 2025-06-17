@@ -112,18 +112,21 @@
           </div>
 
           <!-- Términos y Condiciones -->
-          <div class="flex items-center">
+          <div class="flex items-start">
             <Field
               name="acceptTerms"
               type="checkbox"
-              class="h-4 w-4 text-vet-600 focus:ring-vet-500 border-gray-300 rounded"
+              :value="true"
+              :unchecked-value="false"
+              class="h-4 w-4 text-vet-600 focus:ring-vet-500 border-gray-300 rounded mt-1"
               :class="{ 'border-red-500': errors.acceptTerms }"
+              id="acceptTerms"
             />
-            <label class="ml-2 block text-sm text-gray-900">
+            <label for="acceptTerms" class="ml-2 block text-sm text-gray-900 cursor-pointer">
               Acepto los 
-              <a href="/terms" class="text-vet-600 hover:text-vet-500">términos y condiciones</a>
+              <a href="/terms" target="_blank" class="text-vet-600 hover:text-vet-500 underline">términos y condiciones</a>
               y la 
-              <a href="/privacy" class="text-vet-600 hover:text-vet-500">política de privacidad</a>
+              <a href="/privacy" target="_blank" class="text-vet-600 hover:text-vet-500 underline">política de privacidad</a>
             </label>
           </div>
           <ErrorMessage name="acceptTerms" class="text-red-500 text-sm" />
@@ -196,20 +199,16 @@ const schema = yup.object({
   acceptTerms: yup
     .boolean()
     .required('Debes aceptar los términos y condiciones')
-    .oneOf([true], 'Debes aceptar los términos y condiciones')
+    .oneOf([true], 'Debes aceptar los términos y condiciones para continuar')
 })
 
 // Submit handler
 const onSubmit = async (values) => {
   try {
-    await authStore.register({
-      firstName: values.firstName,
-      lastName: values.lastName,
-      email: values.email,
-      phoneNumber: values.phoneNumber,
-      address: values.address,
-      password: values.password
-    })
+    // Filtrar campos que no van al backend
+    const { acceptTerms, confirmPassword, ...registrationData } = values
+    
+    await authStore.register(registrationData)
     
     toast.success('Cuenta creada exitosamente')
     
