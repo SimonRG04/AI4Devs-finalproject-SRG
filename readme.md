@@ -19,9 +19,9 @@
 
 ### **0.3. Descripción breve del proyecto:**
 
-Estoy desarrollando un sistema web innovador para la gestión integral de una clínica veterinaria, con un enfoque particular en la incorporación de inteligencia artificial para diagnósticos preliminares.
+VetAI Connect es un sistema web innovador para la gestión integral de clínicas veterinarias, con un enfoque particular en la incorporación de inteligencia artificial para prediagnósticos veterinarios automatizados.
 
-El sistema "VetAI Connect" busca modernizar la gestión de clínicas veterinarias mediante una plataforma web que conecte a dueños de mascotas con veterinarios, facilitando la programación de citas, el seguimiento de historiales clínicos y, como elemento diferenciador, ofreciendo capacidades de pre-diagnóstico basadas en inteligencia artificial.
+El sistema busca modernizar la gestión de clínicas veterinarias mediante una plataforma web que conecte a dueños de mascotas con veterinarios, facilitando la programación de citas, el seguimiento de historiales clínicos y, como elemento diferenciador, ofreciendo capacidades de prediagnóstico basadas en **DeepSeek AI**, permitiendo análisis inteligente de síntomas descritos por los dueños de mascotas antes de las consultas presenciales.
 
 ### **0.4. URL del proyecto desplegado:**
 
@@ -85,11 +85,12 @@ Los beneficiarios principales son:
    - Subida y almacenamiento de pruebas y resultados
    - Compartición segura entre veterinarios
 
-5. **Pre-diagnóstico mediante IA**
-   - Subida de imágenes previas a la consulta
-   - Análisis preliminar de condiciones visibles
-   - Informe automatizado para el veterinario
-   - Sugerencias de preparación para la consulta
+5. **Prediagnóstico mediante DeepSeek AI**
+   - Análisis inteligente de síntomas descritos por el dueño
+   - Evaluación de severidad y duración de condiciones
+   - Generación de prediagnósticos estructurados con probabilidades
+   - Recomendaciones automáticas personalizadas
+   - Informe completo disponible para el veterinario antes de la consulta
 
 6. **Comunicación Integrada**
    - Notificaciones automáticas sobre resultados y citas
@@ -106,15 +107,15 @@ El diseño de VetAI Connect sigue los principios de simplicidad, accesibilidad y
 2. **Dashboard principal**: Visión general de mascotas, próximas citas y notificaciones.
 3. **Gestión de mascotas**: Interfaz intuitiva para añadir/editar mascotas y visualizar historiales.
 4. **Reserva de citas**: Calendario interactivo con selección de fecha, hora y veterinario.
-5. **Pre-diagnóstico IA**: Interfaz simple para subir imágenes con guía clara.
-6. **Seguimiento**: Visualización de resultados y recomendaciones.
+5. **Prediagnóstico DeepSeek AI**: Formulario intuitivo para describir síntomas con guías contextuales.
+6. **Seguimiento**: Visualización de resultados estructurados y recomendaciones personalizadas.
 
 #### Flujo de usuario principal - Veterinario:
 
 1. **Dashboard profesional**: Agenda diaria, casos pendientes y alertas.
 2. **Gestión de citas**: Vista de calendario con detalles de pacientes.
 3. **Revisión de historiales**: Interfaz médica con acceso rápido a datos relevantes.
-4. **Consulta de pre-diagnósticos**: Visualización de resultados IA con imágenes originales.
+4. **Consulta de prediagnósticos**: Visualización de análisis DeepSeek AI con síntomas y contexto originales.
 5. **Registro de consultas**: Formularios médicos optimizados para entrada rápida de datos.
 
 #### Características visuales:
@@ -271,27 +272,27 @@ graph TB
 - **API RESTful**: Interfaces bien definidas entre frontend y backend para facilitar evolución independiente.
 - **Stateless backend**: Autenticación por JWT para escalabilidad horizontal.
 
-#### Flujo de datos para pre-diagnóstico IA:
+#### Flujo de datos para prediagnóstico DeepSeek AI:
 
 ```mermaid
 sequenceDiagram
     participant C as Cliente
     participant F as Frontend
     participant B as Backend
-    participant IA as API IA
+    participant DS as DeepSeek API
     participant DB as Base de Datos
     
-    C->>F: Sube imagen de mascota
-    F->>F: Validación inicial (formato/tamaño)
-    F->>B: POST /api/diagnosis/pre-analysis
-    B->>B: Validación y pre-procesamiento
-    B->>IA: Envía imagen para análisis
-    IA->>IA: Procesamiento con modelo ML
-    IA->>B: Devuelve resultados
-    B->>B: Procesa y formatea resultados
-    B->>DB: Almacena resultados
-    B->>F: Respuesta con ID de diagnóstico
-    F->>C: Muestra resultados preliminares
+    C->>F: Describe síntomas de la mascota
+    F->>F: Validación inicial de campos
+    F->>B: POST /api/diagnosis (síntomas, mascota, contexto)
+    B->>B: Validación y estructuración de datos
+    B->>DS: Envía prompt estructurado con síntomas
+    DS->>DS: Análisis con modelo deepseek-chat
+    DS->>B: Devuelve prediagnóstico estructurado
+    B->>B: Procesa y valida resultados JSON
+    B->>DB: Almacena diagnóstico completo
+    B->>F: Respuesta con ID y resultados
+    F->>C: Muestra prediagnóstico detallado
 ```
 
 #### Consideraciones de seguridad:
@@ -631,10 +632,15 @@ erDiagram
         int id PK
         int petId FK
         int appointmentId FK
-        string imageUrl
+        string symptoms
+        string duration
+        string severity
+        string additionalInfo
         json results
         float confidence
-        enum status "PENDING|COMPLETED|FAILED"
+        enum status "PENDING|PROCESSING|COMPLETED|FAILED"
+        string errorMessage
+        datetime processedAt
         datetime createdAt
         datetime updatedAt
     }
@@ -763,17 +769,22 @@ Registros médicos generados durante las consultas.
 | updatedAt | TIMESTAMP | Fecha de última actualización | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
 
 #### 7. AI_DIAGNOSES
-Resultados de pre-diagnósticos generados por IA.
+Resultados de prediagnósticos generados por DeepSeek AI.
 
 | Campo | Tipo | Descripción | Restricciones |
 |-------|------|-------------|---------------|
 | id | INT | Identificador único | PK, AUTO_INCREMENT |
 | petId | INT | Mascota analizada | FK → PETS.id, NOT NULL |
 | appointmentId | INT | Cita asociada | FK → APPOINTMENTS.id |
-| imageUrl | VARCHAR(255) | URL de la imagen analizada | NOT NULL |
-| results | JSON | Resultados del análisis | NOT NULL |
-| confidence | FLOAT | Nivel de confianza (0-1) | |
-| status | ENUM | Estado del diagnóstico | 'PENDING', 'COMPLETED', 'FAILED', NOT NULL |
+| symptoms | TEXT | Descripción de síntomas | NOT NULL |
+| duration | VARCHAR(100) | Duración de los síntomas | |
+| severity | ENUM | Severidad percibida | 'mild', 'moderate', 'severe' |
+| additionalInfo | TEXT | Información adicional | |
+| results | JSON | Resultados del análisis DeepSeek | NOT NULL |
+| confidence | VARCHAR(10) | Nivel de confianza como string | |
+| status | ENUM | Estado del diagnóstico | 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', NOT NULL |
+| errorMessage | TEXT | Mensaje de error si falla | |
+| processedAt | TIMESTAMP | Fecha de procesamiento | |
 | createdAt | TIMESTAMP | Fecha de creación | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
 | updatedAt | TIMESTAMP | Fecha de última actualización | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
 
@@ -999,15 +1010,15 @@ components:
         - gender
 ```
 
-### Diagnóstico con IA
+### Prediagnóstico con DeepSeek AI
 
 ```yaml
 openapi: 3.0.0
 paths:
-  /api/diagnosis/analyze:
+  /api/diagnosis:
     post:
-      summary: Solicitar análisis de imagen con IA
-      description: Envía una imagen para análisis automatizado
+      summary: Crear prediagnóstico con DeepSeek AI
+      description: Analiza síntomas descritos y genera prediagnóstico veterinario
       tags:
         - AI Diagnosis
       security:
@@ -1015,7 +1026,7 @@ paths:
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
               type: object
               properties:
@@ -1025,19 +1036,25 @@ paths:
                 appointmentId:
                   type: integer
                   description: ID de la cita asociada (opcional)
-                image:
+                symptoms:
                   type: string
-                  format: binary
-                  description: Imagen para analizar
-                description:
+                  description: Descripción detallada de los síntomas
+                duration:
                   type: string
-                  description: Descripción del problema o síntomas
+                  description: Duración de los síntomas
+                severity:
+                  type: string
+                  enum: [mild, moderate, severe]
+                  description: Severidad percibida
+                additionalInfo:
+                  type: string
+                  description: Información adicional relevante
               required:
                 - petId
-                - image
+                - symptoms
       responses:
-        '202':
-          description: Análisis iniciado
+        '201':
+          description: Prediagnóstico creado y en procesamiento
           content:
             application/json:
               schema:
@@ -1048,9 +1065,9 @@ paths:
                     description: ID del diagnóstico
                   status:
                     type: string
-                    enum: [PENDING]
+                    enum: [PENDING, PROCESSING]
         '400':
-          description: Datos inválidos o imagen no procesable
+          description: Datos inválidos
   
   /api/diagnosis/{id}:
     get:
@@ -1093,15 +1110,26 @@ paths:
                               type: number
                             description:
                               type: string
+                            severity:
+                              type: string
                       recommendations:
                         type: array
                         items:
                           type: string
+                      confidence:
+                        type: number
+                      metadata:
+                        type: object
+                        properties:
+                          urgencyLevel:
+                            type: string
+                          disclaimer:
+                            type: string
                   confidence:
-                    type: number
+                    type: string
                   status:
                     type: string
-                    enum: [PENDING, COMPLETED, FAILED]
+                    enum: [PENDING, PROCESSING, COMPLETED, FAILED]
                   createdAt:
                     type: string
                     format: date-time
@@ -1136,23 +1164,29 @@ curl -X POST https://api.vetai-connect.com/api/auth/login \
 }
 ```
 
-**Ejemplo de Petición - Diagnóstico con IA:**
+**Ejemplo de Petición - Prediagnóstico con DeepSeek AI:**
 
 ```bash
-curl -X POST https://api.vetai-connect.com/api/diagnosis/analyze \
+curl -X POST https://api.vetai-connect.com/api/diagnosis \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
-  -F "petId=5" \
-  -F "description=Mancha rojiza en la piel que apareció hace 3 días" \
-  -F "image=@foto_mascota.jpg"
+  -H "Content-Type: application/json" \
+  -d '{
+    "petId": 5,
+    "appointmentId": 12,
+    "symptoms": "Mi perro ha estado vomitando desde ayer por la noche. No quiere comer y se ve muy decaído.",
+    "duration": "24 horas",
+    "severity": "moderate",
+    "additionalInfo": "Ayer comió algo en el parque que no debería haber comido."
+  }'
 ```
 
-**Ejemplo de Respuesta - Diagnóstico con IA:**
+**Ejemplo de Respuesta - Prediagnóstico con DeepSeek AI:**
 
 ```json
 {
   "id": 42,
-  "status": "PENDING",
-  "message": "La imagen ha sido enviada para análisis. Los resultados estarán disponibles en breve."
+  "status": "PROCESSING",
+  "message": "El prediagnóstico está siendo procesado por DeepSeek AI. Los resultados estarán disponibles en breve."
 }
 ```
 
@@ -1202,43 +1236,45 @@ La API completa incluye más de 30 endpoints adicionales que cubren todas las fu
 
 **Estimación**: 3 horas
 
-### Historia de Usuario 2: Solicitud de pre-diagnóstico mediante IA
+### Historia de Usuario 2: Solicitud de prediagnóstico mediante DeepSeek AI
 
-**Título**: Solicitud de pre-diagnóstico mediante IA para condición visible
+**Título**: Solicitud de prediagnóstico mediante DeepSeek AI basado en síntomas
 
 **Como** dueño de mascota,  
-**Quiero** enviar imágenes de una condición visible en mi mascota antes de una cita,  
-**Para** obtener un pre-diagnóstico preliminar que ayude al veterinario a prepararse.
+**Quiero** describir los síntomas que observo en mi mascota antes de una cita,  
+**Para** obtener un prediagnóstico preliminar que ayude al veterinario a prepararse.
 
 **Criterios de aceptación**:
 
 1. **DADO** que tengo una cita programada,  
    **CUANDO** accedo a los detalles de la cita,  
-   **ENTONCES** debo ver una opción para "Solicitar pre-diagnóstico con IA".
+   **ENTONCES** debo ver una opción para "Solicitar prediagnóstico con IA".
 
-2. **DADO** que he seleccionado la opción de pre-diagnóstico,  
-   **CUANDO** se me presente la interfaz de carga,  
+2. **DADO** que he seleccionado la opción de prediagnóstico,  
+   **CUANDO** se me presente el formulario,  
    **ENTONCES** debo poder:
-   - Subir hasta 3 imágenes claras de la condición
-   - Añadir una descripción breve del problema (obligatorio)
-   - Ver consejos sobre cómo tomar buenas fotografías
-   - Ver advertencias claras sobre las limitaciones del pre-diagnóstico con IA
+   - Describir detalladamente los síntomas observados (obligatorio)
+   - Especificar la duración de los síntomas
+   - Indicar la severidad percibida (leve, moderada, severa)
+   - Añadir información adicional relevante
+   - Ver advertencias claras sobre las limitaciones del prediagnóstico con IA
 
-3. **DADO** que he cargado imágenes y descripción,  
-   **CUANDO** presiono "Solicitar análisis",  
-   **ENTONCES** debe iniciarse el procesamiento y mostrarme una pantalla de espera con indicación de progreso.
+3. **DADO** que he completado la descripción de síntomas,  
+   **CUANDO** presiono "Solicitar prediagnóstico",  
+   **ENTONCES** debe iniciarse el procesamiento con DeepSeek AI y mostrarme una pantalla de espera con indicación de progreso.
 
 4. **DADO** que el análisis ha sido completado,  
    **CUANDO** recibo los resultados,  
    **ENTONCES** debo ver:
-   - Posibles condiciones identificadas con nivel de probabilidad
-   - Recomendaciones generales
+   - Condiciones posibles identificadas con nivel de probabilidad y severidad
+   - Recomendaciones específicas y personalizadas
+   - Nivel de urgencia sugerido
    - Disclaimer claro sobre que esto no reemplaza el diagnóstico profesional
    - Confirmación de que estos resultados ya están disponibles para el veterinario
 
-5. **DADO** que he recibido un pre-diagnóstico,  
+5. **DADO** que he recibido un prediagnóstico,  
    **CUANDO** asisto a mi cita,  
-   **ENTONCES** el veterinario debe tener acceso a las imágenes enviadas y resultados del análisis.
+   **ENTONCES** el veterinario debe tener acceso a los síntomas descritos y resultados del análisis DeepSeek.
 
 **Prioridad**: Should have
 
@@ -1259,7 +1295,7 @@ La API completa incluye más de 30 endpoints adicionales que cubren todas las fu
    **ENTONCES** debo ver inmediatamente:
    - Citas programadas para hoy (con estado y hora)
    - Próxima cita destacada con temporizador de cuenta regresiva
-   - Alertas sobre pre-diagnósticos IA pendientes de revisión
+   - Alertas sobre prediagnósticos DeepSeek AI pendientes de revisión
    - Resumen de pacientes atendidos/pendientes
 
 2. **DADO** que estoy en mi dashboard,  
@@ -1267,14 +1303,14 @@ La API completa incluye más de 30 endpoints adicionales que cubren todas las fu
    **ENTONCES** debo ver inmediatamente:
    - Información completa del paciente (mascota)
    - Historial médico relevante
-   - Pre-diagnósticos IA si existen
+   - Prediagnósticos DeepSeek AI si existen
    - Botón para iniciar consulta
 
 3. **DADO** que estoy realizando una consulta,  
    **CUANDO** accedo a la interfaz de registro médico,  
    **ENTONCES** debo poder:
    - Registrar diagnóstico, tratamiento y notas
-   - Ver y comentar sobre pre-diagnósticos IA
+   - Ver y comentar sobre prediagnósticos DeepSeek AI
    - Cargar imágenes o documentos adicionales
    - Generar prescripciones
    - Programar seguimiento o próxima visita
@@ -1295,124 +1331,126 @@ La API completa incluye más de 30 endpoints adicionales que cubren todas las fu
 
 ## 6. Tickets de Trabajo
 
-### Ticket 1: Implementación del componente de pre-diagnóstico IA en el frontend
+### Ticket 1: Implementación del componente de prediagnóstico DeepSeek AI en el frontend
 
-**Título**: Implementación del componente de pre-diagnóstico IA en el frontend
+**Título**: Implementación del componente de prediagnóstico DeepSeek AI en el frontend
 
 **Descripción**:  
-Desarrollar los componentes de interfaz de usuario en VueJS necesarios para permitir a los usuarios subir imágenes de sus mascotas, solicitar análisis de IA, y visualizar los resultados del pre-diagnóstico.
+Desarrollar los componentes de interfaz de usuario en VueJS necesarios para permitir a los usuarios describir síntomas de sus mascotas, solicitar análisis de DeepSeek AI, y visualizar los resultados del prediagnóstico.
 
 **Tareas técnicas**:
-- [ ] Crear componente `AIDiagnosisUploader.vue` con:
-  - Dropzone para carga de imágenes con vista previa
-  - Validación de formato y tamaño (JPG/PNG, máx 5MB)
-  - Campo para descripción del problema
-  - Indicadores de progreso de carga
-- [ ] Crear componente `AIDiagnosisProcess.vue` para:
-  - Mostrar estado de procesamiento
-  - Animación de espera durante análisis
+- [x] Crear componente `PreDiagnosisModal.vue` con:
+  - Formulario para descripción de síntomas
+  - Campos para duración y severidad
+  - Campo para información adicional
+  - Validación de campos obligatorios
+- [x] Crear componente `DiagnosisProgress.vue` para:
+  - Mostrar estado de procesamiento (PENDING/PROCESSING)
+  - Animación de espera durante análisis DeepSeek
   - Manejo de errores de procesamiento
-- [ ] Crear componente `AIDiagnosisResults.vue` para:
+- [x] Crear componente `DiagnosisResultCard.vue` para:
   - Visualización estructurada de resultados
-  - Gráficos de confianza para cada condición detectada
-  - Sección de recomendaciones
+  - Gráficos de probabilidad para cada condición detectada
+  - Sección de recomendaciones personalizadas
+  - Nivel de urgencia y confianza
   - Disclaimers legales claramente visibles
-- [ ] Implementar store Pinia para gestión de estado del diagnóstico
-- [ ] Integrar con servicios API mediante Axios
-- [ ] Implementar manejo de errores y situaciones excepcionales
-- [ ] Añadir tests unitarios para componentes principales
+- [x] Implementar store Pinia para gestión de estado del diagnóstico
+- [x] Integrar con servicios API mediante Axios
+- [x] Implementar manejo de errores y situaciones excepcionales
+- [x] Añadir tests unitarios para componentes principales
 
 **Dependencias**:
-- Servicio de API para diagnóstico IA implementado en backend
+- Servicio de API para prediagnóstico DeepSeek AI implementado en backend
 - Componentes UI base (botones, inputs, etc.) disponibles
 
 **Definition of Done**:
-- Componentes implementados y funcionando según diseño
-- Integración correcta con API backend
-- Tests unitarios pasando con cobertura >80%
-- Responsive en dispositivos móviles y escritorio
-- Validación de accesibilidad básica (WCAG AA)
-- Revisión de código completada
+- ✅ Componentes implementados y funcionando según diseño
+- ✅ Integración correcta con API backend DeepSeek
+- ✅ Tests unitarios pasando con cobertura >80%
+- ✅ Responsive en dispositivos móviles y escritorio
+- ✅ Validación de accesibilidad básica (WCAG AA)
+- ✅ Revisión de código completada
 
 **Estimación**: 8 horas
 
-### Ticket 2: Implementación del servicio de integración con API de IA en backend
+### Ticket 2: Implementación del servicio de integración con DeepSeek AI en backend
 
-**Título**: Implementación del servicio de integración con API de IA en backend
+**Título**: Implementación del servicio de integración con DeepSeek AI en backend
 
 **Descripción**:  
-Desarrollar un módulo NestJS para gestionar la integración con APIs externas de análisis de imágenes para pre-diagnósticos veterinarios, incluyendo procesamiento asíncrono, almacenamiento de resultados y manejo de errores.
+Desarrollar un módulo NestJS para gestionar la integración con DeepSeek AI para prediagnósticos veterinarios basados en síntomas descritos, incluyendo procesamiento asíncrono, almacenamiento de resultados y manejo de errores.
 
 **Tareas técnicas**:
-- [ ] Crear módulo `DiagnosisModule` con:
+- [x] Crear módulo `DiagnosisModule` con:
   - Controlador para endpoints REST
   - Servicio para lógica de negocio
   - DTO para validación de datos entrantes/salientes
   - Entidades para persistencia
-- [ ] Implementar integración con API Imagga:
-  - Servicio adaptador con métodos de comunicación
-  - Transformadores para mapeo de respuestas
-  - Manejo de rate limiting y reintentos
-- [ ] Desarrollar sistema de procesamiento asíncrono:
-  - Cola de trabajos con Bull/Redis
-  - Procesadores para jobs de análisis
-  - Sistema de notificaciones al completar
-- [ ] Implementar almacenamiento de imágenes:
-  - Integración con AWS S3 o alternativa
-  - Generación de URLs firmadas
-  - Validación y sanitización de archivos
-- [ ] Crear endpoints REST para:
-  - Solicitud de análisis (`POST /api/diagnosis/analyze`)
+- [x] Implementar integración con DeepSeek API:
+  - Servicio adaptador `DeepSeekService` con métodos de comunicación
+  - Prompts especializados para diagnóstico veterinario
+  - Transformadores para mapeo de respuestas JSON
+  - Manejo de rate limiting y timeouts
+- [x] Desarrollar sistema de procesamiento asíncrono:
+  - Procesamiento directo sin colas para mayor simplicidad
+  - Estados de diagnóstico (PENDING/PROCESSING/COMPLETED/FAILED)
+  - Sistema de validación de respuestas DeepSeek
+- [x] Implementar validación de síntomas:
+  - Validación de campos obligatorios
+  - Sanitización de texto descriptivo
+  - Mapeo de severidad y duración
+- [x] Crear endpoints REST para:
+  - Creación de prediagnóstico (`POST /api/diagnosis`)
   - Consulta de resultados (`GET /api/diagnosis/{id}`)
-  - Listado de diagnósticos por mascota (`GET /api/pets/{id}/diagnoses`)
-- [ ] Implementar tests unitarios y de integración
+  - Diagnósticos por cita (`GET /api/appointments/{id}/diagnosis`)
+- [x] Implementar tests unitarios y de integración
 
 **Dependencias**:
-- Cuenta y credenciales para API de Imagga
-- Bucket S3 o sistema de almacenamiento configurado
+- Cuenta y credenciales para DeepSeek AI API
 - Módulos de autenticación y mascotas implementados
+- Base de datos PostgreSQL configurada
 
 **Definition of Done**:
-- API endpoints implementados y documentados con Swagger
-- Tests pasando con cobertura >85%
-- Manejo correcto de casos excepcionales
-- Performance aceptable (respuesta <200ms para consultas)
-- Documentación técnica actualizada
-- Logging adecuado para debugging
+- ✅ API endpoints implementados y documentados con Swagger
+- ✅ Tests pasando con cobertura >85%
+- ✅ Manejo correcto de casos excepcionales
+- ✅ Performance aceptable (respuesta <2s para análisis completo)
+- ✅ Documentación técnica actualizada
+- ✅ Logging adecuado para debugging
 
 **Estimación**: 10 horas
 
-### Ticket 3: Diseño e implementación del esquema de base de datos para diagnósticos IA
+### Ticket 3: Diseño e implementación del esquema de base de datos para prediagnósticos DeepSeek AI
 
-**Título**: Diseño e implementación del esquema de base de datos para diagnósticos IA
+**Título**: Diseño e implementación del esquema de base de datos para prediagnósticos DeepSeek AI
 
 **Descripción**:  
-Diseñar y configurar las tablas, relaciones y migraciones necesarias en PostgreSQL para almacenar diagnósticos generados por IA, incluyendo imágenes, resultados y metadatos asociados.
+Diseñar y configurar las tablas, relaciones y migraciones necesarias en PostgreSQL para almacenar prediagnósticos generados por DeepSeek AI, incluyendo síntomas, resultados estructurados y metadatos asociados.
 
 **Tareas técnicas**:
-- [ ] Diseñar esquema de tabla `ai_diagnoses`:
-  - Definir todos los campos necesarios
+- [x] Diseñar esquema de tabla `ai_diagnoses`:
+  - Campos para síntomas, duración, severidad, información adicional
   - Establecer claves primarias y foráneas
   - Configurar índices para consultas frecuentes
   - Definir constraints y validaciones
-- [ ] Crear entidad TypeORM `AIDiagnosis` con:
+- [x] Crear entidad TypeORM `AIDiagnosis` con:
   - Decoradores para mapeo ORM
   - Relaciones con entidades Pet y Appointment
-  - Validadores y transformadores
-- [ ] Implementar migración para creación inicial:
-  - Script de creación de tabla
-  - Índices para optimización
-  - Datos iniciales de prueba
-- [ ] Desarrollar repositorio personalizado para:
+  - Validadores y transformadores para campos DeepSeek
+- [x] Implementar migraciones para:
+  - Script de creación de tabla inicial
+  - Migración específica para añadir petId a medical records
+  - Índices para optimización de consultas
+- [x] Desarrollar repositorio personalizado para:
   - Consultas complejas optimizadas
   - Funciones de agregación para estadísticas
-  - Gestión de transacciones
-- [ ] Implementar mecanismos para:
+  - Gestión de transacciones y validaciones de acceso
+- [x] Implementar mecanismos para:
   - Paginación eficiente de resultados
-  - Búsqueda y filtrado
-  - Eliminación segura con soft delete
-- [ ] Configurar estrategia de backups y retención de datos
-- [ ] Crear pruebas de integración con base de datos real
+  - Búsqueda y filtrado por estados
+  - Control de acceso basado en roles (CLIENT/VET)
+- [x] Configurar estrategia de backups y retención de datos
+- [x] Crear pruebas de integración con base de datos real
 
 **Dependencias**:
 - Configuración base de PostgreSQL
@@ -1420,12 +1458,12 @@ Diseñar y configurar las tablas, relaciones y migraciones necesarias en Postgre
 - ORM configurado en el proyecto
 
 **Definition of Done**:
-- Esquema implementado y migraciones funcionando
-- Consultas optimizadas (validadas con EXPLAIN)
-- Entidad correctamente mapeada con ORM
-- Tests de integración pasando
-- Documentación del modelo actualizada
-- Verificado respaldo y recuperación
+- ✅ Esquema implementado y migraciones funcionando
+- ✅ Consultas optimizadas (validadas con EXPLAIN)
+- ✅ Entidad correctamente mapeada con ORM
+- ✅ Tests de integración pasando
+- ✅ Documentación del modelo actualizada
+- ✅ Verificado respaldo y recuperación
 
 **Estimación**: 6 horas
 
@@ -1433,23 +1471,24 @@ Diseñar y configurar las tablas, relaciones y migraciones necesarias en Postgre
 
 ## 7. Pull Requests
 
-### Pull Request 1: Implementación del sistema de pre-diagnóstico IA
+### Pull Request 1: Implementación del sistema de prediagnóstico DeepSeek AI
 
-**Título**: Implementación del sistema de pre-diagnóstico IA
+**Título**: Implementación del sistema de prediagnóstico DeepSeek AI
 
 **Descripción**:
-Esta PR implementa la funcionalidad core del sistema de pre-diagnóstico mediante IA, incluyendo la integración con Imagga API, procesamiento asincrónico de imágenes, almacenamiento de resultados y la interfaz de usuario completa para que los clientes puedan subir imágenes y visualizar resultados.
+Esta PR implementa la funcionalidad core del sistema de prediagnóstico mediante DeepSeek AI, incluyendo la integración completa con DeepSeek API, procesamiento inteligente de síntomas, almacenamiento de resultados estructurados y la interfaz de usuario completa para que los clientes puedan describir síntomas y visualizar prediagnósticos detallados.
 
 **Cambios principales**:
-- Nuevo módulo backend `DiagnosisModule` con controladores, servicios y DTOs
-- Integración con Imagga API para análisis de imágenes
-- Sistema de procesamiento asincrónico con Bull/Redis
-- Componentes frontend para carga y visualización de diagnósticos
-- Nuevas tablas en base de datos y migraciones correspondientes
-- Tests unitarios y de integración
+- Nuevo módulo backend `DiagnosisModule` con controladores, servicios y DTOs especializados
+- Integración completa con DeepSeek AI API usando prompts veterinarios especializados
+- Sistema de procesamiento asíncrono optimizado para análisis de texto
+- Componentes frontend intuitivos para descripción de síntomas y visualización de resultados
+- Nuevas tablas en base de datos con campos específicos para síntomas y resultados DeepSeek
+- Tests unitarios y de integración completos
+- Sistema de polling inteligente para actualizaciones en tiempo real
 
 **Impacto**:
-Esta implementación cubre la funcionalidad diferenciadora principal del sistema. Afecta tanto frontend como backend y requiere la configuración de servicios externos.
+Esta implementación cubre la funcionalidad diferenciadora principal del sistema. Afecta tanto frontend como backend, proporcionando una experiencia completa de prediagnóstico veterinario basado en IA.
 
 **Checklist de revisión**:
 - [x] El código sigue los estándares de codificación del proyecto
@@ -1457,9 +1496,11 @@ Esta implementación cubre la funcionalidad diferenciadora principal del sistema
 - [x] La documentación ha sido actualizada
 - [x] Se han manejado adecuadamente los casos de error
 - [x] La interfaz de usuario es intuitiva y accesible
-- [x] El rendimiento es aceptable incluso con imágenes grandes
+- [x] El rendimiento es aceptable para análisis de texto con DeepSeek
 - [x] Se siguen las mejores prácticas de seguridad
 - [x] Los disclaimers legales son claros y visibles
+- [x] Los prompts de DeepSeek están optimizados para precisión veterinaria
+- [x] El sistema de polling funciona correctamente sin problemas de permisos
 
 **Imágenes de demostración**:
 

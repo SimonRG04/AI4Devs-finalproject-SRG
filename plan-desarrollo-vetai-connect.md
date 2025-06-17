@@ -5,7 +5,7 @@
 - **Nombre**: VetAI Connect
 - **Desarrollador**: Simón Ramirez Guarumo
 - **Repositorio**: https://github.com/SimonRG04/AI4Devs-finalproject-SRG
-- **Tech Stack**: NestJS + PostgreSQL + VueJS + Railway
+- **Tech Stack**: NestJS + PostgreSQL + VueJS + Railway + DeepSeek AI
 - **Tiempo Estimado Total**: 30 horas
 
 ---
@@ -84,7 +84,7 @@ backend/
 │   ├── medical-record.entity.ts # Historiales médicos
 │   ├── prescription.entity.ts # Prescripciones
 │   ├── vaccination.entity.ts # Vacunaciones
-│   ├── ai-diagnosis.entity.ts # Diagnósticos IA
+│   ├── ai-diagnosis.entity.ts # Diagnósticos IA con DeepSeek
 │   ├── attachment.entity.ts # Archivos adjuntos
 │   └── notification.entity.ts # Notificaciones
 ```
@@ -238,7 +238,7 @@ POST   /api/medical/:id/attachments   # Añadir archivo
 - ✅ Relaciones entre entidades funcionando
 - ✅ Autorización por roles funcionando
 
-### 1.5. Módulo de IA y Diagnóstico (3 horas)
+### 1.5. Módulo de IA y Diagnóstico con DeepSeek (3 horas)
 
 #### Estructura del Módulo Diagnosis:
 ```
@@ -247,43 +247,68 @@ modules/diagnosis/
 ├── diagnosis.service.ts      # Lógica de IA
 ├── diagnosis.module.ts       # Configuración
 ├── providers/
-│   ├── imagga.service.ts     # Integración Imagga
-│   └── image-processor.service.ts # Procesamiento
+│   ├── deepseek.service.ts   # Integración DeepSeek API
+│   └── diagnosis-processor.service.ts # Procesamiento
+├── entities/
+│   └── ai-diagnosis.entity.ts # Entidad diagnósticos IA
 ├── dto/
-│   ├── diagnosis-request.dto.ts
+│   ├── create-diagnosis.dto.ts
 │   ├── diagnosis-response.dto.ts
-│   └── image-upload.dto.ts
+│   └── diagnosis-request.dto.ts
 └── diagnosis.repository.ts
 ```
 
 #### Funcionalidades Clave:
-- [x] **Integración con Imagga API**
-  - Configuración de credenciales
-  - Adaptador para API externa
-  - Manejo de rate limiting
+- [x] **Integración con DeepSeek API**
+  - Configuración de credenciales y endpoints
+  - Adaptador para comunicación con DeepSeek Chat
+  - Prompts especializados para diagnóstico veterinario
+  - Manejo de rate limiting y timeouts
 
-- [x] **Procesamiento de imágenes**
-  - Validación de formato y tamaño
-  - Almacenamiento en almacenamiento cloud
-  - Generación de URLs seguras
+- [x] **Procesamiento inteligente de síntomas**
+  - Análisis de texto descriptivo de síntomas
+  - Procesamiento de contexto adicional (edad, raza, peso)
+  - Evaluación de severidad y duración
+  - Generación de recomendaciones personalizadas
 
-- [x] **Sistema asíncrono**
-  - Cola de trabajos para procesamiento
-  - Estados de diagnóstico (PENDING/COMPLETED/FAILED)
-  - Notificaciones al completar
+- [x] **Sistema asíncrono robusto**
+  - Procesamiento asíncrono de solicitudes
+  - Estados de diagnóstico (PENDING/PROCESSING/COMPLETED/FAILED)
+  - Sistema de notificaciones automáticas
+  - Retry logic para fallos temporales
 
 #### Endpoints del Módulo:
 ```typescript
-POST /api/diagnosis/analyze     # Solicitar análisis
-GET  /api/diagnosis/:id         # Obtener resultados
-GET  /api/pets/:id/diagnoses    # Diagnósticos de mascota
+POST /api/diagnosis             # Crear prediagnóstico
+GET  /api/diagnosis/:id         # Obtener resultados específicos
+GET  /api/appointments/:id/diagnosis # Diagnósticos de cita
 DELETE /api/diagnosis/:id       # Eliminar diagnóstico
 ```
 
+#### Integración DeepSeek:
+```typescript
+// Configuración DeepSeek
+interface DeepSeekConfig {
+  apiUrl: 'https://api.deepseek.com/v1/chat/completions'
+  model: 'deepseek-chat'
+  temperature: 0.3  // Para mayor precisión médica
+  maxTokens: 1500   // Suficiente para diagnósticos detallados
+}
+
+// Prompt especializado para veterinaria
+const VETERINARY_PROMPT = `
+Eres un asistente de prediagnóstico veterinario especializado.
+Analiza los síntomas proporcionados y genera un prediagnóstico estructurado.
+Incluye: condiciones posibles, probabilidades, severidad y recomendaciones.
+Siempre incluye disclaimer sobre consulta profesional necesaria.
+`
+```
+
 #### Criterios de Completitud:
-- ✅ Integración con Imagga funcionando
-- ✅ Carga de imágenes operativa
-- ✅ Procesamiento asíncrono funcionando
+- ✅ Integración con DeepSeek funcionando
+- ✅ Procesamiento de síntomas descriptivos
+- ✅ Generación de prediagnósticos estructurados
+- ✅ Sistema de confianza y probabilidades
 - ✅ Resultados almacenándose correctamente
 
 ### 1.6. Testing y Documentación (2 horas)
@@ -296,16 +321,17 @@ test/
 │   ├── pets/
 │   ├── appointments/
 │   ├── medical/
-│   └── diagnosis/
+│   └── diagnosis/           # Tests del módulo DeepSeek
 ├── integration/             # Tests de integración
 │   ├── auth.e2e-spec.ts
 │   ├── pets.e2e-spec.ts
 │   ├── appointments.e2e-spec.ts
-│   └── diagnosis.e2e-spec.ts
+│   └── diagnosis.e2e-spec.ts # Tests E2E del prediagnóstico
 └── fixtures/                # Datos de prueba
     ├── users.fixture.ts
     ├── pets.fixture.ts
-    └── appointments.fixture.ts
+    ├── appointments.fixture.ts
+    └── diagnosis.fixture.ts # Datos de prueba para IA
 ```
 
 #### Cobertura de Tests:
@@ -313,16 +339,19 @@ test/
   - Servicios de cada módulo
   - Controladores principales
   - Validaciones y transformaciones
+  - Integración DeepSeek mockeada
 
 - [x] **Tests de integración**
   - Flujos completos de autenticación
   - CRUD de entidades principales
-  - Integración con servicios externos
+  - Integración con DeepSeek (con mocks)
+  - Flujo completo de prediagnóstico
 
 - [x] **Documentación Swagger**
   - Todos los endpoints documentados
   - Ejemplos de request/response
   - Esquemas de autenticación
+  - Documentación específica de prediagnóstico IA
 
 #### Criterios de Completitud:
 - ✅ Cobertura de tests >85%
@@ -345,6 +374,7 @@ frontend/
 │   ├── components/          # Componentes reutilizables
 │   │   ├── common/          # Componentes base
 │   │   ├── forms/           # Formularios
+│   │   ├── diagnosis/       # Componentes prediagnóstico
 │   │   └── layout/          # Layout components
 │   ├── views/               # Páginas principales
 │   │   ├── auth/            # Páginas de autenticación
@@ -378,6 +408,7 @@ frontend/
 - [x] **Configuración de estado global**
   - Pinia stores para cada módulo
   - Store de autenticación global
+  - Store específico para diagnósticos IA
   - Persistencia de estado en localStorage
 
 #### Criterios de Completitud:
@@ -512,20 +543,20 @@ interface AppointmentsActions {
 - ✅ Confirmaciones y notificaciones
 - ✅ Interfaz clara para selección
 
-### 2.5. Sistema de Diagnóstico IA (2 horas)
+### 2.5. Sistema de Prediagnóstico con DeepSeek IA (2 horas)
 
 #### Componentes de Diagnóstico:
 ```
 components/diagnosis/
-├── ImageUploader.vue        # Cargador de imágenes
+├── PreDiagnosisModal.vue    # Modal para crear prediagnóstico
+├── DiagnosisResultCard.vue  # Tarjeta de resultados
 ├── DiagnosisProgress.vue    # Progreso de análisis
-├── DiagnosisResults.vue     # Resultados del análisis
-├── ImagePreview.vue         # Vista previa de imagen
-└── ConditionCard.vue        # Tarjeta de condición
+├── SymptomForm.vue          # Formulario de síntomas
+└── ConditionCard.vue        # Tarjeta de condición detectada
 
 views/diagnosis/
-├── DiagnosisView.vue        # Vista principal
-├── UploadImageView.vue      # Subir imagen
+├── DiagnosisView.vue        # Vista principal (si aplicable)
+├── CreateDiagnosisView.vue  # Crear prediagnóstico
 ├── ResultsView.vue          # Ver resultados
 └── HistoryView.vue          # Historial de diagnósticos
 ```
@@ -536,22 +567,31 @@ views/diagnosis/
 interface DiagnosisState {
   diagnoses: AIDiagnosis[]
   currentDiagnosis: AIDiagnosis | null
-  uploadProgress: number
-  analysisStatus: AnalysisStatus
+  loading: boolean
+  error: string | null
 }
 
 interface DiagnosisActions {
-  uploadImage(file: File, petId: number, description: string): Promise<void>
+  createPreDiagnosis(data: CreateDiagnosisDto): Promise<AIDiagnosis>
   fetchDiagnosis(id: number): Promise<void>
   fetchPetDiagnoses(petId: number): Promise<void>
   deleteDiagnosis(id: number): Promise<void>
+  refreshDiagnosis(id: number): Promise<void>
 }
 ```
 
+#### Integración con DeepSeek:
+- **Flujo de usuario simplificado**: Solo descripción de síntomas, sin imágenes
+- **Formulario intuitivo**: Campos para síntomas, duración, severidad
+- **Resultados estructurados**: Condiciones posibles, probabilidades, recomendaciones
+- **Polling inteligente**: Actualización automática de estado del diagnóstico
+- **UI profesional**: Visualización clara de resultados con disclaimers
+
 #### Criterios de Completitud:
-- ✅ Carga de imágenes con validación
-- ✅ Visualización de resultados clara
-- ✅ Estados de progreso informativos
+- ✅ Formulario de síntomas funcional
+- ✅ Integración completa con backend DeepSeek
+- ✅ Visualización profesional de resultados
+- ✅ Sistema de polling para estados
 - ✅ Disclaimers legales visibles
 
 ---
@@ -565,18 +605,18 @@ interface DiagnosisActions {
    - Base de datos con datos de prueba
 
 2. **Servicios externos requeridos para Fase 1**
-   - Cuenta Imagga API (gratuita hasta 2000 requests/mes)
+   - Cuenta DeepSeek API (modelo deepseek-chat)
    - PostgreSQL (Railway gratuito)
-   - Almacenamiento de imágenes (Railway/Cloudinary gratuito)
+   - Almacenamiento de archivos (Railway/Cloudinary gratuito)
 
 ### Dependencias de Configuración:
 ```bash
 # Variables de entorno requeridas
 DATABASE_URL=postgresql://...
 JWT_SECRET=...
-IMAGGA_API_KEY=...
-IMAGGA_API_SECRET=...
-CLOUDINARY_URL=... (opcional)
+DEEPSEEK_API_KEY=...
+DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
+DEEPSEEK_MODEL=deepseek-chat
 ```
 
 ---
@@ -587,19 +627,20 @@ CLOUDINARY_URL=... (opcional)
 - ✅ Todos los endpoints API funcionando según especificación
 - ✅ Tests pasando con cobertura >85%
 - ✅ Documentación Swagger actualizada
-- ✅ Integración IA funcionando
+- ✅ Integración DeepSeek funcionando completamente
 - ✅ Despliegue en Railway exitoso
 
 ### Fase 2 Completada Cuando:
 - ✅ Todas las vistas implementadas y funcionales
 - ✅ Integración completa con backend
+- ✅ Prediagnóstico IA funcionando end-to-end
 - ✅ UI/UX responsiva y accesible
 - ✅ Manejo de errores robusto
 - ✅ Despliegue frontend en Railway exitoso
 
 ### Proyecto Completado Cuando:
 - ✅ Flujos end-to-end funcionando
-- ✅ Sistema de pre-diagnóstico IA operativo
+- ✅ Sistema de pre-diagnóstico IA operativo con DeepSeek
 - ✅ Gestión completa de citas y mascotas
 - ✅ Ambos entornos desplegados y accesibles
 - ✅ Documentación técnica completa
@@ -611,13 +652,20 @@ CLOUDINARY_URL=... (opcional)
 ### Servicios Gratuitos/Bajo Costo:
 - **Railway**: Plan gratuito para desarrollo y testing
 - **PostgreSQL**: Incluido en Railway gratuito
-- **Imagga API**: 2000 requests gratuitos/mes
-- **Cloudinary**: Plan gratuito para almacenamiento de imágenes
+- **DeepSeek API**: Modelo altamente eficiente y costo-efectivo
 - **GitHub**: Repositorio y CI/CD gratuito
 
-### Estimación de Costos Mínimos:
+### Estimación de Costos Actuales:
 - **Desarrollo**: $0 (servicios gratuitos)
-- **Producción**: <$10/mes (upgrade Railway si necesario)
-- **APIs externas**: $0-15/mes según uso de Imagga
+- **Producción**: <$5/mes (Railway básico)
+- **DeepSeek API**: ~$1-3/mes según uso (muy económico)
+- **Total estimado**: <$10/mes para producción completa
 
-Este plan estructura el desarrollo de manera eficiente, asegurando una base sólida antes de construir la interfaz de usuario, manteniendo costos mínimos y siguiendo las especificaciones técnicas definidas en el readme.md. 
+### Ventajas de DeepSeek vs Imagga:
+- **Costo**: Significativamente más económico que Imagga
+- **Versatilidad**: Mejor comprensión de contexto y síntomas descriptivos
+- **Precisión**: Resultados más detallados y estructurados
+- **Escalabilidad**: Mejor manejo de volumen y complejidad
+- **Mantenimiento**: Menor necesidad de procesamiento de imágenes
+
+Este plan estructura el desarrollo de manera eficiente, asegurando una base sólida antes de construir la interfaz de usuario, manteniendo costos mínimos y siguiendo las especificaciones técnicas definidas en el readme.md, ahora con la integración exitosa de DeepSeek para prediagnósticos veterinarios inteligentes. 
