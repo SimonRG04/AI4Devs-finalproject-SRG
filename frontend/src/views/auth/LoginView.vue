@@ -2,12 +2,31 @@
   <div class="min-h-screen flex">
     <!-- Panel izquierdo con información -->
     <div class="hidden lg:block relative w-0 flex-1">
-      <img
-        class="absolute inset-0 h-full w-full object-cover"
-        src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80"
-        alt="Veterinario con mascota"
-      />
-      <div class="absolute inset-0 bg-primary-600 bg-opacity-75"></div>
+      <!-- Logo de corazón elegante como fondo -->
+      <div class="absolute inset-0 bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700">
+        <!-- Patrón de corazones de fondo -->
+        <div class="absolute inset-0 opacity-10">
+          <div class="grid grid-cols-6 gap-8 h-full p-8 transform rotate-12">
+            <div v-for="i in 48" :key="i" class="flex items-center justify-center">
+              <HeartIcon class="h-12 w-12 text-white animate-pulse" :style="{ animationDelay: `${i * 0.1}s` }" />
+            </div>
+          </div>
+        </div>
+        <!-- Logo principal centrado -->
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="text-center">
+            <div class="relative">
+              <!-- Círculo de fondo para el logo -->
+              <div class="w-48 h-48 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white border-opacity-30 shadow-2xl">
+                <HeartIcon class="h-24 w-24 text-white drop-shadow-lg" />
+              </div>
+              <!-- Efectos de brillo -->
+              <div class="absolute -inset-4 bg-white bg-opacity-10 rounded-full animate-ping"></div>
+              <div class="absolute -inset-2 bg-white bg-opacity-20 rounded-full animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+             </div>
       <div class="absolute inset-0 flex items-center justify-center p-12">
         <div class="text-center">
           <h2 class="text-4xl font-bold text-white mb-4">
