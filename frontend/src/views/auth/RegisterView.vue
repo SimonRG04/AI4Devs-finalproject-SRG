@@ -63,11 +63,15 @@
             <label for="phoneNumber" class="sr-only">Teléfono</label>
             <Field
               name="phoneNumber"
-              type="tel"
-              placeholder="Teléfono (opcional)"
-              class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-vet-500 focus:border-vet-500 focus:z-10 sm:text-sm"
-              :class="{ 'border-red-500': errors.phoneNumber }"
-            />
+              v-slot="{ field, meta }"
+            >
+              <CountryPhoneInput
+                :model-value="field.value"
+                @update:model-value="field.onChange"
+                placeholder="Número de teléfono (opcional)"
+                :has-error="!!errors.phoneNumber"
+              />
+            </Field>
             <ErrorMessage name="phoneNumber" class="text-red-500 text-sm mt-1" />
           </div>
 
@@ -157,6 +161,7 @@ import { useToast } from 'vue-toastification'
 import { Form, Field, ErrorMessage } from 'vee-validate'
 import * as yup from 'yup'
 import { useAuthStore } from '@/stores/auth'
+import CountryPhoneInput from '@/components/common/CountryPhoneInput.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -181,7 +186,11 @@ const schema = yup.object({
   
   phoneNumber: yup
     .string()
-    .matches(/^\+?[\d\s\-()]*$/, 'Formato de teléfono inválido'),
+    .nullable()
+    .test('phone-format', 'Debe ser un número telefónico válido', function(value) {
+      if (!value) return true // Campo opcional
+      return /^\+\d{1,4}\d{4,14}$/.test(value)
+    }),
   
   address: yup
     .string(),
