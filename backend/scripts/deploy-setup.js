@@ -33,6 +33,10 @@ async function main() {
   log(`- IS_FIRST_DEPLOY: ${IS_FIRST_DEPLOY}`);
   log(`- FORCE_SETUP: ${FORCE_SETUP}`);
 
+  // Validar migraciones antes de ejecutar
+  log('📊 Validando estructura de migraciones...');
+  runCommand('npm run migration:validate', 'Validación de migraciones');
+
   // Ejecutar migraciones si está habilitado o es el primer deploy
   if (RUN_MIGRATIONS || IS_FIRST_DEPLOY || FORCE_SETUP) {
     runCommand('npm run migration:run', 'Migraciones de base de datos');

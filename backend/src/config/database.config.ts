@@ -37,7 +37,10 @@ export const AppDataSource = new DataSource({
     Attachment,
     Notification,
   ],
-  migrations: ['src/database/migrations/*.ts'],
+  migrations: [
+    'src/database/migrations/*.ts',
+    'src/migrations/*.ts'
+  ],
   synchronize: false, // En producción siempre false
   logging: configService.get('NODE_ENV') === 'development',
 });
