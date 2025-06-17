@@ -146,6 +146,23 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const fetchProfile = async () => {
+    try {
+      const profile = await authService.getProfile()
+      
+      // Actualizar usuario con datos completos del servidor
+      user.value = { ...user.value, ...profile }
+      
+      // Actualizar en localStorage
+      localStorage.setItem('user', JSON.stringify(user.value))
+      
+      return profile
+    } catch (err) {
+      console.error('Error fetching profile:', err)
+      throw err
+    }
+  }
+
   const updateProfile = async (profileData) => {
     try {
       loading.value = true
@@ -197,6 +214,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     refreshTokens,
     loadUserFromStorage,
+    fetchProfile,
     updateProfile,
     clearError
   }

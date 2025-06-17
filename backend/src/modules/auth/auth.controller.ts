@@ -3,6 +3,7 @@ import {
   Post,
   Body,
   Get,
+  Put,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -17,6 +18,7 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -100,9 +102,37 @@ export class AuthController {
     return {
       id: user.id,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       fullName: user.fullName,
+      phoneNumber: user.phoneNumber,
       role: user.role,
       createdAt: user.createdAt,
     };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar perfil del usuario actual' })
+  @ApiBody({ type: UpdateProfileDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil actualizado exitosamente',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos inválidos',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token inválido o contraseña actual incorrecta',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'El correo electrónico ya está en uso',
+  })
+  async updateProfile(@CurrentUser() user: User, @Body() updateProfileDto: UpdateProfileDto) {
+    return this.authService.updateProfile(user.id, updateProfileDto);
   }
 } 

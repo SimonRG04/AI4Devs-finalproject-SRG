@@ -12,6 +12,7 @@ import { User, UserRole } from '../users/entities/user.entity';
 import { Client } from '../users/entities/client.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { AuthResponseDto, UserResponseDto } from './dto/auth-response.dto';
 
 export interface JwtPayload {
@@ -184,7 +185,10 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       fullName: user.fullName,
+      phoneNumber: user.phoneNumber,
       role: user.role,
     };
   }
@@ -200,5 +204,56 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async updateProfile(userId: number, updateProfileDto: UpdateProfileDto): Promise<UserResponseDto> {
+    const { firstName, lastName, email, phoneNumber, currentPassword, newPassword } = updateProfileDto;
+
+    // Buscar usuario
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['client', 'veterinarian'],
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    // Verificar si el email ya está en uso por otro usuario
+    if (email !== user.email) {
+      const existingUser = await this.userRepository.findOne({
+        where: { email },
+      });
+
+      if (existingUser) {
+        throw new ConflictException('El correo electrónico ya está en uso');
+      }
+    }
+
+    // Verificar cambio de contraseña
+    if (currentPassword && newPassword) {
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        throw new UnauthorizedException('La contraseña actual es incorrecta');
+      }
+
+      // Hash de la nueva contraseña
+      user.password = await bcrypt.hash(newPassword, 12);
+    } else if (currentPassword || newPassword) {
+      throw new BadRequestException('Debes proporcionar tanto la contraseña actual como la nueva');
+    }
+
+    // Actualizar datos
+    user.firstName = firstName;
+    user.lastName = lastName;
+    user.email = email;
+    user.phoneNumber = phoneNumber;
+
+    try {
+      const updatedUser = await this.userRepository.save(user);
+      return this.mapToUserResponse(updatedUser);
+    } catch (error) {
+      throw new BadRequestException('Error al actualizar el perfil');
+    }
   }
 } 

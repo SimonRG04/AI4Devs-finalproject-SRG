@@ -15,10 +15,29 @@ export class UserResponseDto {
   email: string;
 
   @ApiProperty({
+    description: 'Nombre del usuario',
+    example: 'Juan',
+  })
+  firstName: string;
+
+  @ApiProperty({
+    description: 'Apellido del usuario',
+    example: 'Pérez',
+  })
+  lastName: string;
+
+  @ApiProperty({
     description: 'Nombre completo del usuario',
     example: 'Juan Pérez',
   })
   fullName: string;
+
+  @ApiProperty({
+    description: 'Número de teléfono del usuario',
+    example: '+573001234567',
+    required: false,
+  })
+  phoneNumber?: string;
 
   @ApiProperty({
     description: 'Rol del usuario en el sistema',
