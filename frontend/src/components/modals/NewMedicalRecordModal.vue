@@ -21,7 +21,7 @@
         <div class="sm:flex sm:items-start">
           <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
             <h3 class="text-lg leading-6 font-medium text-gray-900 mb-6" id="modal-title">
-              Nuevo Registro Médico
+              {{ props.editingRecord ? 'Editar Registro Médico' : 'Nuevo Registro Médico' }}
             </h3>
             
             <form @submit.prevent="submitForm" class="space-y-6">
@@ -254,7 +254,7 @@
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   </span>
-                  Guardar Registro
+                  {{ props.editingRecord ? 'Actualizar Registro' : 'Guardar Registro' }}
                 </button>
               </div>
             </form>
@@ -266,7 +266,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import { useMedicalRecordsStore } from '../../stores/medicalRecords'
 import { useToast } from 'vue-toastification'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
@@ -275,6 +275,10 @@ const props = defineProps({
   petId: {
     type: [String, Number],
     required: true
+  },
+  editingRecord: {
+    type: Object,
+    default: null
   }
 })
 
@@ -294,6 +298,33 @@ const form = reactive({
   weight: null,
   notes: '',
   prescriptions: []
+})
+
+// Inicializar formulario si está editando
+const initializeForm = () => {
+  if (props.editingRecord) {
+    form.title = props.editingRecord.title || ''
+    form.symptoms = props.editingRecord.symptoms || ''
+    form.diagnosis = props.editingRecord.diagnosis || ''
+    form.treatment = props.editingRecord.treatment || ''
+    form.temperature = props.editingRecord.temperature || null
+    form.weight = props.editingRecord.weight || null
+    form.notes = props.editingRecord.notes || ''
+    
+    // Convertir prescripciones al formato del formulario
+    form.prescriptions = (props.editingRecord.prescriptions || []).map(p => ({
+      medicationName: p.medication || p.medicationName || '',
+      dosage: p.dosage || '',
+      frequency: p.frequency || '',
+      instructions: p.instructions || '',
+      duration: p.duration || 7
+    }))
+  }
+}
+
+// Llamar al inicializar
+onMounted(() => {
+  initializeForm()
 })
 
 const addPrescription = () => {
@@ -337,10 +368,19 @@ const submitForm = async () => {
         }))
     }
     
-    const newRecord = await medicalRecordsStore.createMedicalRecord(medicalRecordData)
+    let result
     
-    emit('created', newRecord)
-    toast.success('Registro médico creado exitosamente')
+    if (props.editingRecord) {
+      // Actualizar registro existente
+      result = await medicalRecordsStore.updateMedicalRecord(props.editingRecord.id, medicalRecordData)
+      toast.success('Registro médico actualizado exitosamente')
+    } else {
+      // Crear nuevo registro
+      result = await medicalRecordsStore.createMedicalRecord(medicalRecordData)
+      toast.success('Registro médico creado exitosamente')
+    }
+    
+    emit('created', result)
     
   } catch (error) {
     console.error('Error creating medical record:', error)

@@ -235,7 +235,13 @@ const loadAvailableSlots = async () => {
     }
     
     // Check availability against existing appointments (excluding current appointment)
-    const existingAppointments = await appointmentsStore.fetchAppointmentsByDate(form.newDate)
+    let existingAppointments = []
+    try {
+      existingAppointments = await appointmentsStore.fetchAppointmentsByDate(form.newDate)
+    } catch (appointmentError) {
+      console.warn('Could not load existing appointments for availability check:', appointmentError)
+      existingAppointments = []
+    }
     const otherAppointments = existingAppointments.filter(apt => apt.id !== props.appointment.id)
     
     slots.forEach(slot => {

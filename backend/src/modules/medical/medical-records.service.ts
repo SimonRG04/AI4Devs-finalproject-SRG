@@ -9,8 +9,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder, DataSource } from 'typeorm';
 import { MedicalRecord } from './entities/medical-record.entity';
 import { Prescription } from './entities/prescription.entity';
-import { Appointment, AppointmentStatus } from '../appointments/entities/appointment.entity';
+import { Appointment, AppointmentStatus, AppointmentType, AppointmentPriority } from '../appointments/entities/appointment.entity';
 import { Pet } from '../pets/entities/pet.entity';
+import { Veterinarian } from '../users/entities/veterinarian.entity';
 import { CreateMedicalRecordDto } from './dto/create-medical-record.dto';
 import { UpdateMedicalRecordDto } from './dto/update-medical-record.dto';
 import { MedicalRecordsQueryDto } from './dto/medical-records-query.dto';
@@ -39,6 +40,8 @@ export class MedicalRecordsService {
     private readonly appointmentRepository: Repository<Appointment>,
     @InjectRepository(Pet)
     private readonly petRepository: Repository<Pet>,
+    @InjectRepository(Veterinarian)
+    private readonly veterinarianRepository: Repository<Veterinarian>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -50,28 +53,72 @@ export class MedicalRecordsService {
     currentUser: any,
   ): Promise<MedicalRecordResponseDto> {
     let appointmentId = createMedicalRecordDto.appointmentId;
+    let isAutomaticAppointment = false;
 
-    // Si no se proporciona appointmentId pero sí petId, buscar o crear una cita
+    // Si no se proporciona appointmentId pero sí petId, crear una cita automática
     if (!appointmentId && createMedicalRecordDto.petId) {
-      this.logger.log(`Creating medical record for pet ${createMedicalRecordDto.petId}`);
+      this.logger.log(`Creating medical record for pet ${createMedicalRecordDto.petId} without specific appointment`);
       
       // Validar acceso a la mascota
       await this.validatePetAccess(createMedicalRecordDto.petId, currentUser);
       
-      // Para el caso de petId, podemos crear un registro médico sin cita específica
-      // o buscar la cita más reciente de la mascota
-      const recentAppointment = await this.appointmentRepository.findOne({
+      // Buscar la cita más reciente (completada o en progreso)
+      let recentAppointment = await this.appointmentRepository.findOne({
         where: { 
           petId: createMedicalRecordDto.petId,
-          status: AppointmentStatus.COMPLETED // Solo citas completadas
+          status: AppointmentStatus.COMPLETED
         },
         order: { scheduledAt: 'DESC' }
       });
 
-      if (recentAppointment) {
-        appointmentId = recentAppointment.id;
+      // Si no hay cita completada, buscar cualquier cita reciente
+      if (!recentAppointment) {
+        recentAppointment = await this.appointmentRepository.findOne({
+          where: { 
+            petId: createMedicalRecordDto.petId,
+            status: AppointmentStatus.IN_PROGRESS
+          },
+          order: { scheduledAt: 'DESC' }
+        });
+      }
+
+      // Si aún no hay cita, crear una cita automática para este registro
+      if (!recentAppointment) {
+        this.logger.log(`Creating automatic appointment for pet ${createMedicalRecordDto.petId}`);
+        
+        // Obtener el veterinario actual
+        let veterinarianId: number;
+        if (currentUser.role === 'VET') {
+          // Buscar el veterinarianId del usuario actual
+          const veterinarian = await this.veterinarianRepository.findOne({
+            where: { user: { id: currentUser.id || currentUser.sub } }
+          });
+          veterinarianId = veterinarian?.id;
+        }
+
+        if (!veterinarianId) {
+          throw new BadRequestException('No se pudo determinar el veterinario para crear la cita automática');
+        }
+
+        // Crear cita automática
+        const automaticAppointment = this.appointmentRepository.create({
+          petId: createMedicalRecordDto.petId,
+          veterinarianId: veterinarianId,
+          scheduledAt: new Date(),
+          type: AppointmentType.CONSULTATION,
+          status: AppointmentStatus.COMPLETED,
+          priority: AppointmentPriority.NORMAL,
+          duration: 30,
+          notes: 'Cita creada automáticamente para registro médico'
+        });
+
+        const savedAppointment = await this.appointmentRepository.save(automaticAppointment);
+        appointmentId = savedAppointment.id;
+        isAutomaticAppointment = true;
+        this.logger.log(`Created automatic appointment with ID: ${appointmentId}`);
       } else {
-        throw new BadRequestException('No se encontró una cita completada para esta mascota. Debe especificar un appointmentId.');
+        appointmentId = recentAppointment.id;
+        this.logger.log(`Using existing appointment ID: ${appointmentId}`);
       }
     } else if (!appointmentId) {
       throw new BadRequestException('Debe proporcionar appointmentId o petId');
@@ -80,15 +127,20 @@ export class MedicalRecordsService {
     this.logger.log(`Creating medical record for appointment ${appointmentId}`);
 
     // Validar que la cita existe y el usuario tiene acceso
-    await this.validateAppointmentAccess(appointmentId, currentUser);
+    // (Solo validar si la cita no fue creada automáticamente)
+    if (!isAutomaticAppointment) {
+      await this.validateAppointmentAccess(appointmentId, currentUser);
+    }
 
-    // Verificar que no exista ya un registro médico para esta cita
+    // Verificar si ya existe un registro médico para esta cita
     const existingRecord = await this.medicalRecordRepository.findOne({
       where: { appointmentId },
     });
 
     if (existingRecord) {
-      throw new BadRequestException('Ya existe un registro médico para esta cita');
+      this.logger.log(`Medical record already exists for appointment ${appointmentId}, updating instead of creating`);
+      // Si ya existe, actualizar el registro existente con los nuevos datos
+      return this.updateOrMerge(existingRecord.id, createMedicalRecordDto, currentUser);
     }
 
     // Usar transacción para crear registro médico y prescripciones
@@ -98,17 +150,47 @@ export class MedicalRecordsService {
 
     try {
       // Crear el registro médico
-      const { prescriptions, petId, ...recordData } = createMedicalRecordDto;
+      const { prescriptions, petId, requiresFollowUp, ...recordData } = createMedicalRecordDto;
+      
+      // Filtrar solo campos que existen en la entidad MedicalRecord
+      const validFields = [
+        'title', 'diagnosis', 'treatment', 'notes', 'symptoms', 
+        'temperature', 'weight', 'followUpDate', 'nextVisitRecommendations'
+      ];
+      
+      const filteredData = Object.keys(recordData)
+        .filter(key => validFields.includes(key))
+        .reduce((obj, key) => {
+          obj[key] = recordData[key];
+          return obj;
+        }, {});
+      
+      // Obtener petId de la cita si no se proporcionó directamente
+      let petIdForRecord = petId;
+      if (!petIdForRecord && appointmentId) {
+        const result = await queryRunner.manager.query('SELECT pet_id FROM appointments WHERE id = $1', [appointmentId]);
+        petIdForRecord = result[0]?.pet_id;
+      }
       
       // Convertir fechas string a Date
-      const medicalRecord = this.medicalRecordRepository.create({
-        ...recordData,
+      const medicalRecordData: any = {
+        ...filteredData,
         appointmentId,
-        followUpDate: recordData.followUpDate ? new Date(recordData.followUpDate) : undefined,
-      });
-
+        petId: petIdForRecord,
+      };
+      
+      // Manejar followUpDate por separado si existe
+      if (filteredData['followUpDate']) {
+        medicalRecordData.followUpDate = new Date(filteredData['followUpDate']);
+      }
+      
+      // Crear y guardar el registro médico
+      const medicalRecord = this.medicalRecordRepository.create(medicalRecordData);
       const savedRecord = await queryRunner.manager.save(medicalRecord);
-      this.logger.log(`Medical record created with ID: ${savedRecord.id}`);
+      
+      // TypeScript fix: savedRecord podría ser array, obtenemos el primer elemento
+      const recordId = Array.isArray(savedRecord) ? savedRecord[0]?.id : (savedRecord as any).id;
+      this.logger.log(`Medical record created with ID: ${recordId}`);
 
       // Crear prescripciones si se proporcionaron
       if (prescriptions && prescriptions.length > 0) {
@@ -122,26 +204,18 @@ export class MedicalRecordsService {
           const prescription = this.prescriptionRepository.create({
             ...prescriptionDto,
             medication,
-            medicalRecordId: savedRecord.id,
-            startDate: prescriptionDto.startDate ? new Date(prescriptionDto.startDate) : new Date(),
-            endDate: prescriptionDto.endDate ? new Date(prescriptionDto.endDate) : undefined,
+            medicalRecordId: recordId,
+            duration: prescriptionDto.durationDays || 7, // Default a 7 días si no se especifica
           });
-
-          // Calcular fecha de fin si se proporcionó duración
-          if (prescriptionDto.durationDays && !prescriptionDto.endDate) {
-            const startDate = prescription.startDate;
-            const endDate = new Date(startDate.getTime() + prescriptionDto.durationDays * 24 * 60 * 60 * 1000);
-            prescription.endDate = endDate;
-          }
 
           await queryRunner.manager.save(prescription);
         }
-        this.logger.log(`Created ${prescriptions.length} prescriptions for medical record ${savedRecord.id}`);
+        this.logger.log(`Created ${prescriptions.length} prescriptions for medical record ${recordId}`);
       }
 
       await queryRunner.commitTransaction();
       
-      return this.findOne(savedRecord.id, currentUser);
+      return this.findOne(recordId, currentUser);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error(`Error creating medical record: ${error.message}`, error.stack);
@@ -259,26 +333,39 @@ export class MedicalRecordsService {
       throw new ForbiddenException('Solo los veterinarios pueden actualizar registros médicos');
     }
 
-    // Si el usuario es veterinario, validar que sea el mismo que creó el registro
-    if (currentUser.role === UserRole.VET) {
-      const originalRecord = await this.medicalRecordRepository.findOne({
-        where: { id },
-        relations: ['appointment', 'appointment.veterinarian', 'appointment.veterinarian.user'],
-      });
-
-      if (originalRecord?.appointment?.veterinarian?.user?.id !== currentUser.sub) {
-        throw new ForbiddenException('Solo puedes actualizar tus propios registros médicos');
-      }
-    }
+    // Los veterinarios pueden actualizar cualquier registro médico
+    // Esto es necesario para colaboración médica, guardias, emergencias y seguimientos
 
     try {
+      // Separar relaciones y campos calculados de los datos de actualización
+      const { 
+        prescriptions, 
+        petId, 
+        requiresFollowUp, // Campo calculado, no debe ir a BD
+        ...recordData 
+      } = updateMedicalRecordDto;
+      
+      // Filtrar solo campos que existen en la entidad MedicalRecord
+      const validFields = [
+        'title', 'diagnosis', 'treatment', 'notes', 'symptoms', 
+        'temperature', 'weight', 'followUpDate', 'nextVisitRecommendations'
+      ];
+      
+      const filteredData = Object.keys(recordData)
+        .filter(key => validFields.includes(key))
+        .reduce((obj, key) => {
+          obj[key] = recordData[key];
+          return obj;
+        }, {} as any);
+
       const updateData = {
-        ...updateMedicalRecordDto,
+        ...filteredData,
         followUpDate: updateMedicalRecordDto.followUpDate 
           ? new Date(updateMedicalRecordDto.followUpDate) 
           : undefined,
       };
 
+      this.logger.log(`Updating medical record ${id} with filtered data:`, Object.keys(updateData));
       await this.medicalRecordRepository.update(id, updateData);
       
       const updatedRecord = await this.findOne(id, currentUser);
@@ -288,6 +375,103 @@ export class MedicalRecordsService {
     } catch (error) {
       this.logger.error(`Error updating medical record: ${error.message}`, error.stack);
       throw new BadRequestException('Error al actualizar el registro médico');
+    }
+  }
+
+  /**
+   * Actualizar o fusionar un registro médico con datos de creación
+   */
+  private async updateOrMerge(
+    id: number,
+    createMedicalRecordDto: CreateMedicalRecordDto,
+    currentUser: any,
+  ): Promise<MedicalRecordResponseDto> {
+    const userId = currentUser.sub || currentUser.id || 'unknown';
+    this.logger.log(`Updating/merging medical record with ID: ${id} by user: ${userId}`);
+
+    const existingRecord = await this.findOne(id, currentUser);
+
+    // Solo veterinarios y administradores pueden actualizar registros médicos
+    if (currentUser.role === UserRole.CLIENT) {
+      throw new ForbiddenException('Solo los veterinarios pueden actualizar registros médicos');
+    }
+
+    // Usar transacción para actualizar registro médico y manejar prescripciones
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Separar prescripciones y campos no válidos de los datos del registro
+      const { 
+        prescriptions, 
+        petId, 
+        appointmentId, 
+        requiresFollowUp, // Campo calculado, no debe ir a BD
+        ...recordData 
+      } = createMedicalRecordDto;
+      
+      // Filtrar solo campos que existen en la entidad MedicalRecord
+      const validFields = [
+        'title', 'diagnosis', 'treatment', 'notes', 'symptoms', 
+        'temperature', 'weight', 'followUpDate', 'nextVisitRecommendations'
+      ];
+      
+      const filteredData = Object.keys(recordData)
+        .filter(key => validFields.includes(key))
+        .reduce((obj, key) => {
+          obj[key] = recordData[key];
+          return obj;
+        }, {});
+      
+      // Actualizar el registro médico (fusionar datos existentes con nuevos)
+      const updateData: any = {
+        ...filteredData,
+      };
+      
+      // Manejar followUpDate por separado si existe
+      if (filteredData['followUpDate']) {
+        updateData.followUpDate = new Date(filteredData['followUpDate']);
+      }
+
+      this.logger.log(`Updating medical record ${id} with data:`, Object.keys(updateData));
+      await queryRunner.manager.update('medical_records', id, updateData);
+
+      // Manejar prescripciones si se proporcionaron
+      if (prescriptions && prescriptions.length > 0) {
+        this.logger.log(`Adding ${prescriptions.length} prescriptions to existing medical record ${id}`);
+        
+        for (const prescriptionDto of prescriptions) {
+          // Procesar medicationName si se proporciona en lugar de medication
+          const medication = prescriptionDto.medication || prescriptionDto.medicationName;
+          if (!medication) {
+            throw new BadRequestException('Debe proporcionar medication o medicationName en las prescripciones');
+          }
+
+          const prescription = this.prescriptionRepository.create({
+            ...prescriptionDto,
+            medication,
+            medicalRecordId: id,
+            duration: prescriptionDto.durationDays || 7, // Default a 7 días si no se especifica
+          });
+
+          await queryRunner.manager.save(prescription);
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      
+      // Retornar el registro actualizado
+      const updatedRecord = await this.findOne(id, currentUser);
+      this.logger.log(`Medical record updated/merged successfully with ID: ${id}`);
+      
+      return updatedRecord;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(`Error updating/merging medical record: ${error.message}`, error.stack);
+      throw new BadRequestException('Error al actualizar el registro médico');
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -345,11 +529,28 @@ export class MedicalRecordsService {
     }
 
     if (currentUser.role === UserRole.CLIENT) {
+      // Verificar acceso del cliente
       if (appointment.pet?.client?.user?.id !== currentUser.sub) {
         throw new ForbiddenException('No tienes acceso a esta cita');
       }
     } else if (currentUser.role === UserRole.VET) {
-      if (appointment.veterinarian?.user?.id !== currentUser.sub) {
+      // Para veterinarios, verificar si es su cita
+      const isVetAppointment = appointment.veterinarian?.user?.id === currentUser.sub || 
+                              appointment.veterinarian?.user?.id === currentUser.id;
+      
+      if (!isVetAppointment) {
+        // Obtener el veterinario actual para verificaciones adicionales
+        const currentVet = await this.veterinarianRepository.findOne({
+          where: { user: { id: currentUser.id || currentUser.sub } }
+        });
+        
+        // Si el veterinario actual es el mismo que está asignado a la cita, permitir
+        if (currentVet && appointment.veterinarianId === currentVet.id) {
+          this.logger.log(`Veterinarian ${currentUser.sub} has access to appointment ${appointmentId}`);
+          return;
+        }
+        
+        this.logger.warn(`Veterinarian ${currentUser.sub} denied access to appointment ${appointmentId}`);
         throw new ForbiddenException('No tienes acceso a esta cita');
       }
     }
@@ -364,10 +565,13 @@ export class MedicalRecordsService {
         throw new ForbiddenException('No tienes acceso a este registro médico');
       }
     } else if (currentUser.role === UserRole.VET) {
-      if (medicalRecord.appointment?.veterinarian?.user?.id !== currentUser.sub) {
-        throw new ForbiddenException('No tienes acceso a este registro médico');
-      }
+      // Los veterinarios tienen acceso amplio a todos los registros médicos
+      // Esto es necesario para consultas, guardias, seguimientos, etc.
+      const userId = currentUser.sub || currentUser.id || 'unknown';
+      this.logger.log(`Veterinarian ${userId} accessing medical record ${medicalRecord.id}`);
+      return;
     }
+    // Los administradores tienen acceso completo (sin restricciones)
   }
 
   /**
@@ -386,6 +590,13 @@ export class MedicalRecordsService {
     if (currentUser.role === UserRole.CLIENT && pet.clientId !== currentUser.clientId) {
       throw new ForbiddenException('No tienes acceso a esta mascota');
     }
+    
+    // Los veterinarios tienen acceso a todas las mascotas para crear registros médicos
+    // Los administradores tienen acceso completo
+    if (currentUser.role === UserRole.VET || currentUser.role === UserRole.ADMIN) {
+      this.logger.log(`${currentUser.role} ${currentUser.sub} accessing pet ${petId}`);
+      return;
+    }
   }
 
   /**
@@ -401,10 +612,10 @@ export class MedicalRecordsService {
         clientId: currentUser.clientId 
       });
     } else if (currentUser.role === UserRole.VET) {
-      // Los veterinarios ven solo sus propios registros médicos
-      queryBuilder.andWhere('vetUser.id = :userId', { 
-        userId: currentUser.sub 
-      });
+      // Los veterinarios tienen acceso amplio a todos los registros médicos
+      // Esto es necesario para consultas, guardias, seguimientos, etc.
+      this.logger.log(`VET user ${currentUser.sub} has broad access to medical records`);
+      // No aplicar filtros restrictivos para veterinarios
     }
     // Los administradores pueden ver todos los registros médicos
   }

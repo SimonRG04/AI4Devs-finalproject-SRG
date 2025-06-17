@@ -67,6 +67,14 @@ export const translations = {
     'FAILED': 'Fallido'
   },
 
+  // Estados de prediagnóstico (alias para diagnosisStatus)
+  preDiagnosisStatus: {
+    'PENDING': 'Pendiente',
+    'PROCESSING': 'Procesando',
+    'COMPLETED': 'Completado',
+    'FAILED': 'Fallido'
+  },
+
   // Frecuencias de prescripción
   prescriptionFrequency: {
     'ONCE_DAILY': 'Una vez al día',
@@ -130,6 +138,12 @@ export const getBadgeClass = (category, value) => {
       'UNKNOWN': 'bg-gray-100 text-gray-800'
     },
     diagnosisStatus: {
+      'PENDING': 'bg-yellow-100 text-yellow-800',
+      'PROCESSING': 'bg-blue-100 text-blue-800',
+      'COMPLETED': 'bg-green-100 text-green-800',
+      'FAILED': 'bg-red-100 text-red-800'
+    },
+    preDiagnosisStatus: {
       'PENDING': 'bg-yellow-100 text-yellow-800',
       'PROCESSING': 'bg-blue-100 text-blue-800',
       'COMPLETED': 'bg-green-100 text-green-800',

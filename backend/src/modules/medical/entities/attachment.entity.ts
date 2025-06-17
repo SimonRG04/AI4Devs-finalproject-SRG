@@ -30,9 +30,9 @@ export class Attachment {
   @IsNotEmpty()
   fileName: string;
 
-  @Column({ name: 'file_url' })
+  @Column({ name: 'file_path' })
   @IsNotEmpty()
-  fileUrl: string;
+  filePath: string;
 
   @Column({
     name: 'file_type',
@@ -51,11 +51,8 @@ export class Attachment {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  @CreateDateColumn({ name: 'uploaded_at' })
+  uploadedAt: Date;
 
   // Relaciones
   @ManyToOne(() => MedicalRecord, (record) => record.attachments)

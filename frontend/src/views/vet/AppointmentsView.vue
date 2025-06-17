@@ -146,6 +146,10 @@
                         <ClockIcon class="h-4 w-4 mr-1" />
                         {{ appointment.duration || appointment.durationMinutes }} min
                       </div>
+                      <div v-if="appointment.preDiagnosis" class="flex items-center text-blue-600">
+                        <span class="text-lg mr-1">🤖</span>
+                        <span class="font-medium">IA Análisis</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -341,6 +345,9 @@ const confirmAppointment = async (appointment) => {
     await appointmentService.confirmAppointment(appointment.id)
     appointment.status = 'CONFIRMED'
     toast.success('Cita confirmada exitosamente')
+    
+    // Refrescar datos después de la actualización
+    setTimeout(() => loadAppointments(), 500)
   } catch (error) {
     console.error('Error confirming appointment:', error)
     toast.error('Error al confirmar la cita')
@@ -352,6 +359,9 @@ const startAppointment = async (appointment) => {
     await appointmentService.updateAppointment(appointment.id, { status: 'IN_PROGRESS' })
     appointment.status = 'IN_PROGRESS'
     toast.success('Cita iniciada')
+    
+    // Refrescar datos después de la actualización
+    setTimeout(() => loadAppointments(), 500)
   } catch (error) {
     console.error('Error starting appointment:', error)
     toast.error('Error al iniciar la cita')
@@ -363,6 +373,9 @@ const completeAppointment = async (appointment) => {
     await appointmentService.completeAppointment(appointment.id)
     appointment.status = 'COMPLETED'
     toast.success('Cita completada')
+    
+    // Refrescar datos después de la actualización
+    setTimeout(() => loadAppointments(), 500)
   } catch (error) {
     console.error('Error completing appointment:', error)
     toast.error('Error al completar la cita')
@@ -375,6 +388,9 @@ const cancelAppointment = async (appointment) => {
       await appointmentService.cancelAppointment(appointment.id)
       appointment.status = 'CANCELLED'
       toast.success('Cita cancelada')
+      
+      // Refrescar datos después de la actualización
+      setTimeout(() => loadAppointments(), 500)
     } catch (error) {
       console.error('Error cancelling appointment:', error)
       toast.error('Error al cancelar la cita')

@@ -69,11 +69,30 @@ export const useMedicalRecordsStore = defineStore('medicalRecords', () => {
       error.value = null
       
       const response = await medicalRecordService.getMedicalRecords(petId)
-      medicalRecords.value = response.data || response
       
-      return response
+      // Manejar estructura paginada vs array directo
+      if (response && typeof response === 'object') {
+        if (Array.isArray(response)) {
+          // Si es un array directo
+          medicalRecords.value = response
+        } else if (response.data && Array.isArray(response.data)) {
+          // Si es estructura paginada
+          medicalRecords.value = response.data
+        } else if (Array.isArray(response.data)) {
+          // Fallback para otras estructuras
+          medicalRecords.value = response.data || []
+        } else {
+          console.warn('Unexpected response structure:', response)
+          medicalRecords.value = []
+        }
+      } else {
+        medicalRecords.value = []
+      }
+      
+      return medicalRecords.value
     } catch (err) {
       error.value = err.response?.data?.message || 'Error al cargar registros médicos'
+      medicalRecords.value = [] // Asegurar que siempre sea un array
       throw err
     } finally {
       loading.value = false
@@ -119,6 +138,9 @@ export const useMedicalRecordsStore = defineStore('medicalRecords', () => {
       // Agregar el nuevo registro a la lista
       medicalRecords.value.unshift(newRecord)
       
+      // Refrescar todos los registros para asegurar sincronización
+      setTimeout(() => refreshAllMedicalRecords(recordData.petId), 1000)
+      
       return newRecord
     } catch (err) {
       console.error('Error creating medical record:', err)
@@ -147,6 +169,9 @@ export const useMedicalRecordsStore = defineStore('medicalRecords', () => {
       if (currentRecord.value?.id === id) {
         currentRecord.value = updatedRecord
       }
+      
+      // Refrescar datos del servidor para asegurar sincronización
+      await refreshMedicalRecord(id)
       
       return updatedRecord
     } catch (err) {
@@ -205,6 +230,43 @@ export const useMedicalRecordsStore = defineStore('medicalRecords', () => {
     error.value = null
   }
 
+  // Métodos de refresh para sincronización automática
+  const refreshMedicalRecord = async (id) => {
+    try {
+      const response = await medicalRecordService.getMedicalRecord(id)
+      const refreshedRecord = response.data || response
+      
+      // Actualizar en la lista si existe
+      const index = medicalRecords.value.findIndex(record => record.id === id)
+      if (index !== -1) {
+        medicalRecords.value[index] = refreshedRecord
+      }
+      
+      // Actualizar registro actual si es el mismo
+      if (currentRecord.value?.id === id) {
+        currentRecord.value = refreshedRecord
+      }
+      
+      return refreshedRecord
+    } catch (err) {
+      console.warn('Error refreshing medical record:', err)
+      // No lanzar error para no interrumpir el flujo principal
+    }
+  }
+
+  const refreshAllMedicalRecords = async (petId = null) => {
+    try {
+      await fetchMedicalRecords(petId)
+    } catch (err) {
+      console.warn('Error refreshing all medical records:', err)
+    }
+  }
+
+  // Método de compatibilidad
+  const fetchByPetId = async (petId) => {
+    return await fetchMedicalRecords(petId)
+  }
+
   // Utilidades para formateo
   const formatRecordDate = (dateString) => {
     return format(parseISO(dateString), 'PPpp', { locale: es })
@@ -238,6 +300,7 @@ export const useMedicalRecordsStore = defineStore('medicalRecords', () => {
     // Acciones
     fetchMedicalRecords,
     fetchMedicalRecord,
+    fetchByPetId,
     createMedicalRecord,
     updateMedicalRecord,
     deleteMedicalRecord,
@@ -246,6 +309,10 @@ export const useMedicalRecordsStore = defineStore('medicalRecords', () => {
     setFilters,
     clearFilters,
     clearError,
+    
+    // Métodos de refresh
+    refreshMedicalRecord,
+    refreshAllMedicalRecords,
     
     // Utilidades
     formatRecordDate,

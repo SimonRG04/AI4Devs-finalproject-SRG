@@ -54,15 +54,9 @@ export class Prescription {
   @IsEnum(PrescriptionFrequency)
   frequency: PrescriptionFrequency;
 
-  @Column({ name: 'start_date', type: 'date', nullable: true })
-  @IsOptional()
-  @IsDateString()
-  startDate?: Date;
-
-  @Column({ name: 'end_date', type: 'date', nullable: true })
-  @IsOptional()
-  @IsDateString()
-  endDate?: Date;
+  @Column({ type: 'integer' })
+  @IsNotEmpty()
+  duration: number;
 
   @Column({ type: 'text', nullable: true })
   @IsOptional()
@@ -97,35 +91,29 @@ export class Prescription {
 
   // Métodos helper
   get isActive(): boolean {
-    if (this.status !== PrescriptionStatus.ACTIVE) return false;
-    
-    const today = new Date();
-    
-    // Si no hay fecha de fin, verificar solo que haya empezado
-    if (!this.endDate) {
-      return this.startDate <= today;
-    }
-    
-    // Si hay fecha de fin, verificar que esté en el rango
-    return this.startDate <= today && today <= this.endDate;
+    return this.status === PrescriptionStatus.ACTIVE;
   }
 
   get daysRemaining(): number | null {
-    if (!this.endDate || this.status !== PrescriptionStatus.ACTIVE) return null;
+    if (this.status !== PrescriptionStatus.ACTIVE) return null;
     
+    // Calcular en base a la fecha de creación + duración
+    const startDate = this.createdAt;
+    const endDate = new Date(startDate.getTime() + (this.duration * 24 * 60 * 60 * 1000));
     const today = new Date();
-    const diffTime = this.endDate.getTime() - today.getTime();
+    
+    const diffTime = endDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     return diffDays > 0 ? diffDays : 0;
   }
 
-  get totalDurationDays(): number | null {
-    if (!this.endDate) return null;
-    
-    const diffTime = this.endDate.getTime() - this.startDate.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays > 0 ? diffDays : 1;
+  get totalDurationDays(): number {
+    return this.duration;
+  }
+
+  get endDate(): Date {
+    // Calcular fecha de fin basada en createdAt + duration
+    return new Date(this.createdAt.getTime() + (this.duration * 24 * 60 * 60 * 1000));
   }
 } 

@@ -8,6 +8,7 @@ import { Attachment } from './entities/attachment.entity';
 import { Vaccination } from './entities/vaccination.entity';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { Pet } from '../pets/entities/pet.entity';
+import { Veterinarian } from '../users/entities/veterinarian.entity';
 
 // Servicios
 import { MedicalRecordsService } from './medical-records.service';
@@ -26,6 +27,7 @@ import { PrescriptionsController } from './prescriptions.controller';
       Vaccination,
       Appointment,
       Pet,
+      Veterinarian,
     ]),
   ],
   controllers: [

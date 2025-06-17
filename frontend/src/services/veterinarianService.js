@@ -7,6 +7,11 @@ export const veterinarianService = {
     return response.data
   },
 
+  // Alias para compatibilidad
+  async getAllVeterinarians(params = {}) {
+    return this.getVeterinarians(params)
+  },
+
   // Obtener veterinario por ID
   async getVeterinarian(id) {
     const response = await apiClient.get(`/veterinarians/${id}`)

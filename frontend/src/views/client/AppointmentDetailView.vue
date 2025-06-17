@@ -94,13 +94,90 @@
             <!-- Reason -->
             <div class="mt-6 pt-6 border-t border-gray-200">
               <h4 class="text-sm font-medium text-gray-900 mb-2">Motivo de la consulta</h4>
-              <p class="text-gray-700">{{ appointment.reason }}</p>
+              <p class="text-gray-700">{{ appointment.reason || appointment.description }}</p>
             </div>
 
             <!-- Notes -->
             <div v-if="appointment.notes" class="mt-6 pt-6 border-t border-gray-200">
               <h4 class="text-sm font-medium text-gray-900 mb-2">Notas adicionales</h4>
               <p class="text-gray-700">{{ appointment.notes }}</p>
+            </div>
+
+            <!-- Pre-diagnosis Section -->
+            <div v-if="preDiagnosis" class="mt-6 pt-6 border-t border-gray-200">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-sm font-medium text-gray-900 flex items-center">
+                  🤖 Prediagnóstico con IA
+                  <span 
+                    :class="[
+                      'ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                      getDiagnosisStatusColor(preDiagnosis.status)
+                    ]"
+                  >
+                    {{ getDiagnosisStatusText(preDiagnosis.status) }}
+                  </span>
+                </h4>
+                <button
+                  v-if="preDiagnosis.status === 'PENDING' || preDiagnosis.status === 'PROCESSING'"
+                  @click="refreshDiagnosis"
+                  class="text-sm text-primary-600 hover:text-primary-800"
+                >
+                  Actualizar
+                </button>
+              </div>
+
+              <!-- Diagnosis Loading State -->
+              <div v-if="preDiagnosis.status === 'PENDING' || preDiagnosis.status === 'PROCESSING'" 
+                   class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-center">
+                  <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-3"></div>
+                  <div>
+                    <h5 class="text-sm font-medium text-blue-800">
+                      {{ preDiagnosis.status === 'PENDING' ? 'Preparando análisis...' : 'Analizando síntomas...' }}
+                    </h5>
+                    <p class="text-sm text-blue-600 mt-1">
+                      Nuestro sistema de IA está procesando la información. Esto puede tomar unos minutos.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Diagnosis Results -->
+              <div v-else-if="preDiagnosis.status === 'COMPLETED' && preDiagnosis.results" class="space-y-4">
+                <!-- Diagnosis Result Card Component -->
+                <DiagnosisResultCard :diagnosis="preDiagnosis" />
+
+                <!-- Original symptoms -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                  <h5 class="text-sm font-medium text-gray-900 mb-2">Síntomas reportados</h5>
+                  <p class="text-sm text-gray-700">{{ preDiagnosis.description }}</p>
+                  <p class="text-xs text-gray-500 mt-2">
+                    Reportado el {{ formatDateTime(preDiagnosis.createdAt) }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Diagnosis Error State -->
+              <div v-else-if="preDiagnosis.status === 'FAILED'" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex">
+                  <ExclamationTriangleIcon class="h-5 w-5 text-red-400" />
+                  <div class="ml-3">
+                    <h5 class="text-sm font-medium text-red-800">Error en el análisis</h5>
+                    <p class="text-sm text-red-700 mt-1">
+                      No pudimos completar el análisis de los síntomas. 
+                      El veterinario revisará la información durante la consulta.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Disclaimer -->
+              <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p class="text-xs text-yellow-800">
+                  <strong>Importante:</strong> Este prediagnóstico es solo orientativo y no reemplaza la consulta veterinaria profesional. 
+                  Siempre consulte con su veterinario para un diagnóstico definitivo.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -184,7 +261,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { format, parseISO } from 'date-fns'
@@ -201,6 +278,9 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/vue/24/outline'
 
+// Components
+import DiagnosisResultCard from '@/components/diagnosis/DiagnosisResultCard.vue'
+
 // Services
 import appointmentService from '@/services/appointmentService'
 
@@ -214,6 +294,7 @@ const toast = useToast()
 // Reactive data
 const loading = ref(true)
 const appointment = ref(null)
+const preDiagnosis = ref(null)
 
 // Methods
 const loadAppointment = async () => {
@@ -221,6 +302,24 @@ const loadAppointment = async () => {
     const appointmentId = parseInt(route.params.id)
     const response = await appointmentService.getAppointment(appointmentId)
     appointment.value = response.data || response
+    
+    // Buscar prediagnóstico de múltiples fuentes posibles
+    let diagnosis = null
+    
+    // 1. Desde el campo transformado preDiagnosis (backend DTO)
+    if (appointment.value.preDiagnosis) {
+      diagnosis = appointment.value.preDiagnosis
+    }
+    // 2. Desde el array aiDiagnoses (fallback si no está transformado)
+    else if (appointment.value.aiDiagnoses && appointment.value.aiDiagnoses.length > 0) {
+      diagnosis = appointment.value.aiDiagnoses[0] // Tomar el primero (más reciente)
+    }
+    
+    preDiagnosis.value = diagnosis
+    
+    console.log('Appointment loaded:', appointment.value)
+    console.log('Pre-diagnosis found:', preDiagnosis.value)
+    
   } catch (error) {
     console.error('Error loading appointment:', error)
     toast.error('Error al cargar la cita')
@@ -263,8 +362,68 @@ const getPriorityText = (priority) => {
   return translate('appointmentPriority', priority)
 }
 
+const getDiagnosisStatusColor = (status) => {
+  return getBadgeClass('preDiagnosisStatus', status)
+}
+
+const getDiagnosisStatusText = (status) => {
+  return translate('preDiagnosisStatus', status)
+}
+
+const refreshDiagnosis = async () => {
+  try {
+    await appointmentService.refreshPreDiagnosis(appointment.value.id)
+    await loadAppointment()
+    toast.success('Prediagnóstico actualizado exitosamente')
+  } catch (error) {
+    console.error('Error refreshing pre-diagnosis:', error)
+    toast.error('Error al actualizar el prediagnóstico')
+  }
+}
+
+// Reactive state for polling
+const pollingInterval = ref(null)
+
+// Polling for pre-diagnosis updates
+const startPollingPreDiagnosis = () => {
+  if (pollingInterval.value) return // Ya está corriendo
+  
+  pollingInterval.value = setInterval(async () => {
+    if (preDiagnosis.value && (preDiagnosis.value.status === 'PENDING' || preDiagnosis.value.status === 'PROCESSING')) {
+      try {
+        await loadAppointment() // Recargar toda la cita es más seguro que acceso directo al diagnóstico
+      } catch (error) {
+        console.error('Error polling pre-diagnosis:', error)
+      }
+    } else {
+      stopPollingPreDiagnosis() // Detener polling si ya no es necesario
+    }
+  }, 10000) // Cada 10 segundos
+}
+
+const stopPollingPreDiagnosis = () => {
+  if (pollingInterval.value) {
+    clearInterval(pollingInterval.value)
+    pollingInterval.value = null
+  }
+}
+
 // Lifecycle
 onMounted(() => {
   loadAppointment()
+})
+
+// Start polling if there's a pending pre-diagnosis
+watch(() => preDiagnosis.value, (newPreDiagnosis) => {
+  if (newPreDiagnosis && (newPreDiagnosis.status === 'PENDING' || newPreDiagnosis.status === 'PROCESSING')) {
+    startPollingPreDiagnosis()
+  } else {
+    stopPollingPreDiagnosis()
+  }
+}, { immediate: true })
+
+// Cleanup on unmount
+onUnmounted(() => {
+  stopPollingPreDiagnosis()
 })
 </script> 

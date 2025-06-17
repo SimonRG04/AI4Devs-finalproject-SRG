@@ -142,8 +142,23 @@ export class PetsService {
         'client',
         'client.user',
         'appointments',
+        'appointments.veterinarian',
+        'appointments.veterinarian.user',
         'vaccinations',
+        'medicalRecords',
+        'medicalRecords.prescriptions',
+        'medicalRecords.appointment',
+        'medicalRecords.appointment.veterinarian',
+        'medicalRecords.appointment.veterinarian.user',
       ],
+      order: {
+        medicalRecords: {
+          createdAt: 'DESC'
+        },
+        appointments: {
+          scheduledAt: 'DESC'
+        }
+      }
     });
 
     if (!pet) {

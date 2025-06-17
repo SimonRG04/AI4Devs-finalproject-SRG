@@ -563,8 +563,8 @@ const loadPatientData = async () => {
     
     // Load medical records
     loading.value = true
-    const records = await medicalRecordsStore.fetchByPetId(petId.value)
-    medicalRecords.value = records
+    const response = await medicalRecordsStore.fetchByPetId(petId.value)
+    medicalRecords.value = response.data || response || []
     
   } catch (err) {
     console.error('Error loading patient data:', err)

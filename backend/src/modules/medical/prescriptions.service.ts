@@ -57,19 +57,18 @@ export class PrescriptionsService {
     }
 
     try {
+      // Procesar medicationName si se proporciona en lugar de medication
+      const medication = createPrescriptionDto.medication || createPrescriptionDto.medicationName;
+      if (!medication) {
+        throw new BadRequestException('Debe proporcionar medication o medicationName');
+      }
+
       const prescription = this.prescriptionRepository.create({
         ...createPrescriptionDto,
+        medication,
         medicalRecordId,
-        startDate: new Date(createPrescriptionDto.startDate),
-        endDate: createPrescriptionDto.endDate ? new Date(createPrescriptionDto.endDate) : undefined,
+        duration: createPrescriptionDto.durationDays || 7, // Default a 7 días
       });
-
-      // Calcular fecha de fin si se proporcionó duración
-      if (createPrescriptionDto.durationDays && !createPrescriptionDto.endDate) {
-        const startDate = new Date(createPrescriptionDto.startDate);
-        const endDate = new Date(startDate.getTime() + createPrescriptionDto.durationDays * 24 * 60 * 60 * 1000);
-        prescription.endDate = endDate;
-      }
 
       const savedPrescription = await this.prescriptionRepository.save(prescription);
       this.logger.log(`Prescription created with ID: ${savedPrescription.id}`);
@@ -204,22 +203,14 @@ export class PrescriptionsService {
     }
 
     try {
+      // Procesar medicationName si se proporciona en lugar de medication
+      const medication = updatePrescriptionDto.medication || updatePrescriptionDto.medicationName;
+      
       const updateData = {
         ...updatePrescriptionDto,
-        startDate: updatePrescriptionDto.startDate 
-          ? new Date(updatePrescriptionDto.startDate) 
-          : undefined,
-        endDate: updatePrescriptionDto.endDate 
-          ? new Date(updatePrescriptionDto.endDate) 
-          : undefined,
+        medication: medication || undefined,
+        duration: updatePrescriptionDto.durationDays || undefined,
       };
-
-      // Calcular fecha de fin si se proporcionó duración
-      if (updatePrescriptionDto.durationDays && updatePrescriptionDto.startDate && !updatePrescriptionDto.endDate) {
-        const startDate = new Date(updatePrescriptionDto.startDate);
-        const endDate = new Date(startDate.getTime() + updatePrescriptionDto.durationDays * 24 * 60 * 60 * 1000);
-        updateData.endDate = endDate;
-      }
 
       await this.prescriptionRepository.update(id, updateData);
       

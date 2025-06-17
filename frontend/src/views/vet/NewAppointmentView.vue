@@ -225,6 +225,119 @@
             </div>
           </div>
 
+          <!-- Pre-diagnosis Section (Professional) -->
+          <div v-if="selectedPatient && (appointmentForm.type === 'CONSULTATION' || appointmentForm.type === 'EMERGENCY')" class="px-6 py-6 border-t">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">🤖 Análisis Previo con IA</h3>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h4 class="text-sm font-semibold text-blue-900">Solicitar Prediagnóstico Profesional</h4>
+                  <p class="text-sm text-blue-700 mt-1">
+                    Utilice la IA para obtener un análisis preliminar basado en síntomas reportados
+                  </p>
+                </div>
+                <div class="flex items-center">
+                  <input
+                    id="enable-professional-prediagnosis"
+                    v-model="enableProfessionalPreDiagnosis"
+                    type="checkbox"
+                    class="h-4 w-4 text-vet-600 focus:ring-vet-500 border-gray-300 rounded"
+                  />
+                  <label for="enable-professional-prediagnosis" class="ml-2 text-sm text-gray-700">
+                    Activar análisis IA
+                  </label>
+                </div>
+              </div>
+
+              <div v-if="enableProfessionalPreDiagnosis" class="space-y-4">
+                <div class="bg-white rounded-lg p-4 border border-blue-200">
+                  <div class="text-sm text-blue-800 mb-3">
+                    💡 <strong>Casos recomendados:</strong> Síntomas complejos, casos de emergencia, consultas de segunda opinión
+                  </div>
+
+                  <!-- Clinical observations -->
+                  <div class="mb-4">
+                    <label for="professional-symptoms" class="block text-sm font-medium text-gray-700 mb-2">
+                      Observaciones Clínicas Reportadas <span class="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      id="professional-symptoms"
+                      v-model="professionalPreDiagnosisForm.clinicalObservations"
+                      rows="4"
+                      :class="[
+                        'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500',
+                        professionalPreDiagnosisErrors.clinicalObservations ? 'border-red-500' : 'border-gray-300'
+                      ]"
+                      placeholder="Describa los síntomas reportados por el propietario o sus observaciones preliminares..."
+                    ></textarea>
+                    <p v-if="professionalPreDiagnosisErrors.clinicalObservations" class="text-red-500 text-sm mt-1">
+                      {{ professionalPreDiagnosisErrors.clinicalObservations }}
+                    </p>
+                  </div>
+
+                  <!-- Duration and urgency -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label for="professional-duration" class="block text-sm font-medium text-gray-700 mb-2">
+                        Duración de Síntomas
+                      </label>
+                      <select
+                        id="professional-duration"
+                        v-model="professionalPreDiagnosisForm.duration"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
+                      >
+                        <option value="">Seleccionar</option>
+                        <option value="ACUTE">Agudo (menos de 24 horas)</option>
+                        <option value="SUBACUTE">Subagudo (1-7 días)</option>
+                        <option value="CHRONIC">Crónico (más de 1 semana)</option>
+                        <option value="INTERMITTENT">Intermitente</option>
+                        <option value="PROGRESSIVE">Progresivo</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label for="professional-urgency" class="block text-sm font-medium text-gray-700 mb-2">
+                        Nivel de Urgencia
+                      </label>
+                      <select
+                        id="professional-urgency"
+                        v-model="professionalPreDiagnosisForm.urgency"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
+                      >
+                        <option value="">Evaluar con IA</option>
+                        <option value="LOW">Baja - Rutina</option>
+                        <option value="MODERATE">Moderada - Atención preferente</option>
+                        <option value="HIGH">Alta - Atención urgente</option>
+                        <option value="CRITICAL">Crítica - Emergencia</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Additional context -->
+                  <div>
+                    <label for="professional-context" class="block text-sm font-medium text-gray-700 mb-2">
+                      Contexto Clínico Adicional
+                    </label>
+                    <textarea
+                      id="professional-context"
+                      v-model="professionalPreDiagnosisForm.additionalContext"
+                      rows="2"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
+                      placeholder="Historial médico relevante, medicamentos actuales, factores de riesgo..."
+                    ></textarea>
+                  </div>
+
+                  <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <p class="text-xs text-blue-800">
+                      <strong>Nota:</strong> El análisis de IA se procesará tras crear la cita y estará disponible en los detalles de la misma.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Additional Options -->
           <div class="px-6 py-6">
             <h3 class="text-lg font-medium text-gray-900 mb-4">Opciones Adicionales</h3>
@@ -267,14 +380,16 @@
             
             <button
               type="submit"
-              :disabled="submitting || !selectedPatient || !appointmentForm.date || !appointmentForm.time || !appointmentForm.type"
+              :disabled="submitting || !selectedPatient || !appointmentForm.date || !appointmentForm.time || !appointmentForm.type || (enableProfessionalPreDiagnosis && !isProfessionalPreDiagnosisValid)"
               class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-vet-600 hover:bg-vet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-vet-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span v-if="submitting" class="flex items-center">
                 <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Creando...
+                {{ enableProfessionalPreDiagnosis ? 'Creando con IA...' : 'Creando...' }}
               </span>
-              <span v-else>Crear Cita</span>
+              <span v-else>
+                {{ enableProfessionalPreDiagnosis ? 'Crear con Prediagnóstico' : 'Crear Cita' }}
+              </span>
             </button>
           </div>
         </form>
@@ -291,6 +406,7 @@ import { format, addDays } from 'date-fns'
 
 // Store
 import { useAuthStore } from '@/stores/auth'
+import { useDiagnosisStore } from '@/stores/diagnosis'
 
 // Heroicons
 import { 
@@ -310,6 +426,7 @@ import veterinarianService from '@/services/veterinarianService'
 const router = useRouter()
 const toast = useToast()
 const authStore = useAuthStore()
+const diagnosisStore = useDiagnosisStore()
 
 // Reactive data
 const patientSearch = ref('')
@@ -332,6 +449,16 @@ const appointmentForm = ref({
   sendReminder: true
 })
 
+// Professional Pre-diagnosis form
+const enableProfessionalPreDiagnosis = ref(false)
+const professionalPreDiagnosisForm = ref({
+  clinicalObservations: '',
+  duration: '',
+  urgency: '',
+  additionalContext: ''
+})
+const professionalPreDiagnosisErrors = ref({})
+
 // Computed
 const minDate = computed(() => {
   return format(new Date(), 'yyyy-MM-dd')
@@ -339,6 +466,12 @@ const minDate = computed(() => {
 
 const maxDate = computed(() => {
   return format(addDays(new Date(), 90), 'yyyy-MM-dd')
+})
+
+// Professional Pre-diagnosis validation
+const isProfessionalPreDiagnosisValid = computed(() => {
+  if (!enableProfessionalPreDiagnosis.value) return true
+  return professionalPreDiagnosisForm.value.clinicalObservations.trim().length >= 10
 })
 
 // Watch for date changes
@@ -469,6 +602,120 @@ const updateDuration = () => {
   }
 }
 
+// Professional Pre-diagnosis methods
+const validateProfessionalPreDiagnosis = () => {
+  professionalPreDiagnosisErrors.value = {}
+  
+  if (enableProfessionalPreDiagnosis.value) {
+    if (!professionalPreDiagnosisForm.value.clinicalObservations.trim()) {
+      professionalPreDiagnosisErrors.value.clinicalObservations = 'Las observaciones clínicas son obligatorias'
+      return false
+    }
+    if (professionalPreDiagnosisForm.value.clinicalObservations.trim().length < 10) {
+      professionalPreDiagnosisErrors.value.clinicalObservations = 'Por favor proporcione más detalles (mínimo 10 caracteres)'
+      return false
+    }
+  }
+  
+  return true
+}
+
+const buildProfessionalDiagnosisDescription = () => {
+  const parts = []
+  
+  if (professionalPreDiagnosisForm.value.clinicalObservations.trim()) {
+    parts.push(`Observaciones clínicas: ${professionalPreDiagnosisForm.value.clinicalObservations.trim()}`)
+  }
+  
+  if (professionalPreDiagnosisForm.value.duration) {
+    const durationLabels = {
+      'ACUTE': 'agudo (menos de 24 horas)',
+      'SUBACUTE': 'subagudo (1-7 días)',
+      'CHRONIC': 'crónico (más de 1 semana)',
+      'INTERMITTENT': 'intermitente',
+      'PROGRESSIVE': 'progresivo'
+    }
+    parts.push(`Duración: ${durationLabels[professionalPreDiagnosisForm.value.duration]}`)
+  }
+  
+  if (professionalPreDiagnosisForm.value.urgency) {
+    const urgencyLabels = {
+      'LOW': 'baja - rutina',
+      'MODERATE': 'moderada - atención preferente',
+      'HIGH': 'alta - atención urgente',
+      'CRITICAL': 'crítica - emergencia'
+    }
+    parts.push(`Urgencia: ${urgencyLabels[professionalPreDiagnosisForm.value.urgency]}`)
+  }
+  
+  if (professionalPreDiagnosisForm.value.additionalContext?.trim()) {
+    parts.push(`Contexto adicional: ${professionalPreDiagnosisForm.value.additionalContext.trim()}`)
+  }
+  
+  return parts.join('. ')
+}
+
+const createProfessionalPreDiagnosis = async (appointmentId) => {
+  if (!enableProfessionalPreDiagnosis.value || !professionalPreDiagnosisForm.value.clinicalObservations.trim()) {
+    return null
+  }
+
+  try {
+    // Mapear urgencia profesional a severity del backend
+    const mapUrgencyToSeverity = (urgency) => {
+      const mapping = {
+        'LOW': 'mild',
+        'MODERATE': 'moderate',
+        'HIGH': 'severe',
+        'CRITICAL': 'severe'
+      }
+      return mapping[urgency] || null
+    }
+
+    // Mapear duration profesional a texto
+    const mapProfessionalDuration = (duration) => {
+      const mapping = {
+        'ACUTE': 'agudo (menos de 24 horas)',
+        'SUBACUTE': 'subagudo (1-7 días)',
+        'CHRONIC': 'crónico (más de 1 semana)',
+        'INTERMITTENT': 'intermitente',
+        'PROGRESSIVE': 'progresivo'
+      }
+      return mapping[duration] || null
+    }
+
+    const diagnosisData = {
+      petId: selectedPatient.value.id,
+      appointmentId,
+      symptoms: professionalPreDiagnosisForm.value.clinicalObservations.trim(),
+      duration: mapProfessionalDuration(professionalPreDiagnosisForm.value.duration),
+      severity: mapUrgencyToSeverity(professionalPreDiagnosisForm.value.urgency),
+      additionalInfo: professionalPreDiagnosisForm.value.additionalContext?.trim() || null
+    }
+
+    return await diagnosisStore.createPreDiagnosis(diagnosisData)
+  } catch (error) {
+    console.error('Error creating professional pre-diagnosis:', error)
+    toast.warning('La cita se creó correctamente, pero hubo un problema con el prediagnóstico')
+    return null
+  }
+}
+
+const calculatePetAge = (birthDate) => {
+  if (!birthDate) return 'Edad no especificada'
+  
+  const birth = new Date(birthDate)
+  const now = new Date()
+  const years = Math.floor((now - birth) / (365.25 * 24 * 60 * 60 * 1000))
+  
+  if (years > 0) {
+    return `${years} año${years > 1 ? 's' : ''}`
+  } else {
+    const months = Math.floor((now - birth) / (30.44 * 24 * 60 * 60 * 1000))
+    return `${months} mes${months > 1 ? 'es' : ''}`
+  }
+}
+
 const handleSubmit = async () => {
   if (!selectedPatient.value) {
     toast.error('Selecciona un paciente')
@@ -477,6 +724,11 @@ const handleSubmit = async () => {
   
   if (!currentVeterinarian.value) {
     toast.error('Error: No se pudo identificar el veterinario')
+    return
+  }
+  
+  // Validar prediagnóstico profesional si está habilitado
+  if (enableProfessionalPreDiagnosis.value && !validateProfessionalPreDiagnosis()) {
     return
   }
   
@@ -498,9 +750,20 @@ const handleSubmit = async () => {
     
     console.log('Creating appointment with data:', appointmentData)
     
-    await appointmentService.createAppointment(appointmentData)
+    // Crear la cita primero
+    const newAppointment = await appointmentService.createAppointment(appointmentData)
     
-    toast.success('Cita creada exitosamente')
+    // Crear prediagnóstico profesional si está habilitado
+    let diagnosis = null
+    if (enableProfessionalPreDiagnosis.value) {
+      diagnosis = await createProfessionalPreDiagnosis(newAppointment.id)
+    }
+    
+    const successMessage = enableProfessionalPreDiagnosis.value 
+      ? 'Cita creada exitosamente con prediagnóstico solicitado'
+      : 'Cita creada exitosamente'
+    
+    toast.success(successMessage)
     router.push('/vet/appointments')
     
   } catch (error) {

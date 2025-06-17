@@ -136,4 +136,27 @@ export class AppointmentResponseDto {
   @Expose()
   @Transform(({ obj }) => new Date(obj.scheduledAt) < new Date())
   isPast?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Prediagnóstico de IA asociado a la cita',
+    type: 'object',
+  })
+  @Expose()
+  @Transform(({ obj }) => {
+    // Devolver solo el primer (más reciente) prediagnóstico
+    if (obj.aiDiagnoses && obj.aiDiagnoses.length > 0) {
+      return obj.aiDiagnoses[0];
+    }
+    return null;
+  })
+  preDiagnosis?: {
+    id: number;
+    status: string;
+    description?: string;
+    results?: any;
+    confidence?: number;
+    errorMessage?: string;
+    createdAt: Date;
+    processedAt?: Date;
+  };
 } 

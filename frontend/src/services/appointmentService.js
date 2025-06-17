@@ -147,6 +147,28 @@ const appointmentService = {
       notes: rescheduleData.reason ? `Reprogramada: ${rescheduleData.reason}` : undefined
     })
     return response.data
+  },
+
+  // Métodos del prediagnóstico
+  async refreshPreDiagnosis(appointmentId) {
+    try {
+      // Esto realmente solo recarga la cita para obtener el estado actualizado del prediagnóstico
+      return await this.getAppointment(appointmentId)
+    } catch (error) {
+      console.error('Error refreshing pre-diagnosis:', error)
+      throw error
+    }
+  },
+
+  // Obtener prediagnóstico específico de una cita
+  async getAppointmentPreDiagnosis(appointmentId) {
+    try {
+      const response = await apiClient.get(`/appointments/${appointmentId}/pre-diagnosis`)
+      return response.data
+    } catch (error) {
+      console.warn('No pre-diagnosis found for appointment:', error)
+      return null
+    }
   }
 }
 

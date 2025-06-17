@@ -12,6 +12,7 @@ import { IsNotEmpty, IsEnum, IsPositive } from 'class-validator';
 import { Client } from '../../users/entities/client.entity';
 import { Appointment } from '../../appointments/entities/appointment.entity';
 import { Vaccination } from '../../medical/entities/vaccination.entity';
+import { MedicalRecord } from '../../medical/entities/medical-record.entity';
 import { AIDiagnosis } from '../../diagnosis/entities/ai-diagnosis.entity';
 
 export enum PetGender {
@@ -109,6 +110,9 @@ export class Pet {
 
   @OneToMany(() => Vaccination, (vaccination) => vaccination.pet)
   vaccinations: Vaccination[];
+
+  @OneToMany(() => MedicalRecord, (medicalRecord) => medicalRecord.pet)
+  medicalRecords: MedicalRecord[];
 
   @OneToMany(() => AIDiagnosis, (diagnosis) => diagnosis.pet)
   aiDiagnoses: AIDiagnosis[];

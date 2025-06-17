@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { IsNotEmpty } from 'class-validator';
 import { Appointment } from '../../appointments/entities/appointment.entity';
+import { Pet } from '../../pets/entities/pet.entity';
 import { Prescription } from './prescription.entity';
 import { Attachment } from './attachment.entity';
 
@@ -20,6 +21,9 @@ export class MedicalRecord {
 
   @Column({ name: 'appointment_id' })
   appointmentId: number;
+
+  @Column({ name: 'pet_id', nullable: true })
+  petId?: number;
 
   @Column({ nullable: true, length: 200 })
   title?: string;
@@ -59,6 +63,10 @@ export class MedicalRecord {
   @ManyToOne(() => Appointment, (appointment) => appointment.medicalRecords)
   @JoinColumn({ name: 'appointment_id' })
   appointment: Appointment;
+
+  @ManyToOne(() => Pet, (pet) => pet.medicalRecords)
+  @JoinColumn({ name: 'pet_id' })
+  pet: Pet;
 
   @OneToMany(() => Prescription, (prescription) => prescription.medicalRecord)
   prescriptions: Prescription[];

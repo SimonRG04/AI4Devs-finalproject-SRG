@@ -93,7 +93,8 @@ export class AppointmentsService {
       .leftJoinAndSelect('pet.client', 'client')
       .leftJoinAndSelect('client.user', 'clientUser')
       .leftJoinAndSelect('appointment.veterinarian', 'veterinarian')
-      .leftJoinAndSelect('veterinarian.user', 'vetUser');
+      .leftJoinAndSelect('veterinarian.user', 'vetUser')
+      .leftJoinAndSelect('appointment.aiDiagnoses', 'aiDiagnosis');
 
     // Aplicar filtros de acceso según el rol
     this.applyAccessFilters(queryBuilder, currentUser);
@@ -142,6 +143,14 @@ export class AppointmentsService {
         'aiDiagnoses',
       ],
     });
+
+    // Cargar el prediagnóstico más reciente si existe
+    if (appointment && appointment.aiDiagnoses?.length > 0) {
+      // Ordenar por fecha de creación descendente para obtener el más reciente
+      appointment.aiDiagnoses = appointment.aiDiagnoses.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
 
     if (!appointment) {
       throw new NotFoundException(`Cita con ID ${id} no encontrada`);

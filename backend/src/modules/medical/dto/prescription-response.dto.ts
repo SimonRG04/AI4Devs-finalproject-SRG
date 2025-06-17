@@ -34,20 +34,31 @@ export class PrescriptionResponseDto {
   frequency: PrescriptionFrequency;
 
   @ApiProperty({ 
-    description: 'Fecha de inicio del tratamiento',
+    description: 'Duración del tratamiento en días',
+    example: 14
+  })
+  @Expose()
+  duration: number;
+
+  @ApiProperty({ 
+    description: 'Fecha de inicio del tratamiento (calculada desde createdAt)',
     example: '2025-06-03'
   })
   @Expose()
-  @Transform(({ value }) => new Date(value).toISOString().split('T')[0])
+  @Transform(({ obj }) => new Date(obj.createdAt).toISOString().split('T')[0])
   startDate: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Fecha de finalización del tratamiento',
+  @ApiProperty({ 
+    description: 'Fecha de finalización del tratamiento (calculada)',
     example: '2025-06-17'
   })
   @Expose()
-  @Transform(({ value }) => value ? new Date(value).toISOString().split('T')[0] : null)
-  endDate?: string;
+  @Transform(({ obj }) => {
+    const startDate = new Date(obj.createdAt);
+    const endDate = new Date(startDate.getTime() + (obj.duration * 24 * 60 * 60 * 1000));
+    return endDate.toISOString().split('T')[0];
+  })
+  endDate: string;
 
   @ApiPropertyOptional({ 
     description: 'Instrucciones especiales',
@@ -89,29 +100,19 @@ export class PrescriptionResponseDto {
   @ApiProperty({ description: 'Indica si la prescripción está activa', example: true })
   @Expose()
   @Transform(({ obj }) => {
-    if (obj.status !== PrescriptionStatus.ACTIVE) return false;
-    
-    const today = new Date();
-    const startDate = new Date(obj.startDate);
-    
-    // Si no hay fecha de fin, verificar solo que haya empezado
-    if (!obj.endDate) {
-      return startDate <= today;
-    }
-    
-    // Si hay fecha de fin, verificar que esté en el rango
-    const endDate = new Date(obj.endDate);
-    return startDate <= today && today <= endDate;
+    return obj.status === PrescriptionStatus.ACTIVE;
   })
   isActive: boolean;
 
   @ApiPropertyOptional({ description: 'Días restantes del tratamiento', example: 5 })
   @Expose()
   @Transform(({ obj }) => {
-    if (!obj.endDate || obj.status !== PrescriptionStatus.ACTIVE) return null;
+    if (obj.status !== PrescriptionStatus.ACTIVE) return null;
     
+    const startDate = new Date(obj.createdAt);
+    const endDate = new Date(startDate.getTime() + (obj.duration * 24 * 60 * 60 * 1000));
     const today = new Date();
-    const endDate = new Date(obj.endDate);
+    
     const diffTime = endDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
@@ -122,16 +123,9 @@ export class PrescriptionResponseDto {
   @ApiProperty({ description: 'Duración total del tratamiento en días', example: 14 })
   @Expose()
   @Transform(({ obj }) => {
-    if (!obj.endDate) return null;
-    
-    const startDate = new Date(obj.startDate);
-    const endDate = new Date(obj.endDate);
-    const diffTime = endDate.getTime() - startDate.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays > 0 ? diffDays : 1;
+    return obj.duration;
   })
-  totalDurationDays?: number;
+  totalDurationDays: number;
 
   @ApiProperty({ description: 'Descripción de la frecuencia en texto legible', example: 'Dos veces al día' })
   @Expose()

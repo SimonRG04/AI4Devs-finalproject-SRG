@@ -271,6 +271,119 @@
             </div>
           </div>
 
+          <!-- Step 5: Prediagnóstico con IA (Opcional) -->
+          <div v-if="values.time && values.type">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">5. Prediagnóstico con IA (Opcional)</h3>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                  <span class="text-2xl mr-3">🤖</span>
+                  <div>
+                    <h4 class="text-lg font-medium text-gray-900">Análisis previo con Inteligencia Artificial</h4>
+                    <p class="text-sm text-gray-600">Obtén una orientación inicial sobre los síntomas de tu mascota</p>
+                  </div>
+                </div>
+                <div class="flex items-center">
+                  <input
+                    id="enablePreDiagnosis"
+                    v-model="enablePreDiagnosis"
+                    type="checkbox"
+                    class="h-4 w-4 text-vet-600 focus:ring-vet-500 border-gray-300 rounded"
+                  />
+                  <label for="enablePreDiagnosis" class="ml-2 text-sm text-gray-700">
+                    Solicitar análisis de IA
+                  </label>
+                </div>
+              </div>
+
+              <div v-if="enablePreDiagnosis" class="space-y-4">
+                <div class="bg-white rounded-lg p-4 border border-blue-200">
+                  <p class="text-sm text-blue-700 mb-4">
+                    💡 Nuestra IA puede ayudarte a obtener una orientación inicial sobre los síntomas de tu mascota. 
+                    Esta información no reemplaza la consulta veterinaria, pero puede ser útil para preparar la cita.
+                  </p>
+
+                  <!-- Síntomas observados -->
+                  <div class="mb-4">
+                    <label for="symptoms" class="block text-sm font-medium text-gray-700 mb-2">
+                      Síntomas observados <span class="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      id="symptoms"
+                      v-model="preDiagnosisForm.symptoms"
+                      rows="4"
+                      :class="[
+                        'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500',
+                        preDiagnosisErrors.symptoms ? 'border-red-500' : 'border-gray-300'
+                      ]"
+                      placeholder="Describe detalladamente los síntomas que has observado: comportamiento, cambios físicos, alimentación, etc."
+                    ></textarea>
+                    <p v-if="preDiagnosisErrors.symptoms" class="text-red-500 text-sm mt-1">{{ preDiagnosisErrors.symptoms }}</p>
+                  </div>
+
+                  <!-- Duración y severidad -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label for="symptomDuration" class="block text-sm font-medium text-gray-700 mb-2">
+                        ¿Desde cuándo?
+                      </label>
+                      <select
+                        id="symptomDuration"
+                        v-model="preDiagnosisForm.duration"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
+                      >
+                        <option value="">Seleccionar</option>
+                        <option value="HOURS">Pocas horas</option>
+                        <option value="TODAY">Hoy</option>
+                        <option value="YESTERDAY">Desde ayer</option>
+                        <option value="WEEK">Esta semana</option>
+                        <option value="WEEKS">Varias semanas</option>
+                        <option value="MONTH">Un mes o más</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label for="symptomSeverity" class="block text-sm font-medium text-gray-700 mb-2">
+                        Intensidad
+                      </label>
+                      <select
+                        id="symptomSeverity"
+                        v-model="preDiagnosisForm.severity"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
+                      >
+                        <option value="">Seleccionar</option>
+                        <option value="MILD">Leve</option>
+                        <option value="MODERATE">Moderada</option>
+                        <option value="SEVERE">Severa</option>
+                        <option value="CRITICAL">Crítica</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Contexto adicional -->
+                  <div>
+                    <label for="additionalContext" class="block text-sm font-medium text-gray-700 mb-2">
+                      Información adicional
+                    </label>
+                    <textarea
+                      id="additionalContext"
+                      v-model="preDiagnosisForm.additionalContext"
+                      rows="2"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-vet-500 focus:border-vet-500"
+                      placeholder="Cambios recientes en la dieta, medicamentos, vacunas, ambiente, etc."
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="!enablePreDiagnosis" class="text-center py-4">
+                <p class="text-gray-500 text-sm">
+                  El prediagnóstico con IA te ayudará a obtener información valiosa antes de la consulta
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- Resumen de la Cita -->
           <div v-if="values.time" class="bg-gray-50 rounded-lg p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Resumen de la Cita</h3>
@@ -295,6 +408,10 @@
                 <span class="text-gray-600">Motivo:</span>
                 <span class="font-medium">{{ values.type || 'No especificado' }}</span>
               </div>
+              <div v-if="enablePreDiagnosis" class="flex justify-between">
+                <span class="text-gray-600">Prediagnóstico IA:</span>
+                <span class="font-medium text-blue-600">✅ Solicitado</span>
+              </div>
               <div v-if="selectedVeterinarian?.consultationFee || selectedVeterinarian?.consultation_fee" class="flex justify-between border-t pt-3">
                 <span class="text-gray-600">Costo de consulta:</span>
                 <span class="font-semibold text-vet-600">${{ selectedVeterinarian?.consultationFee || selectedVeterinarian?.consultation_fee }} COP</span>
@@ -313,14 +430,16 @@
             </button>
             <button
               type="submit"
-              :disabled="isSubmitting || !canSubmit"
+              :disabled="isSubmitting || !canSubmit || (enablePreDiagnosis && !isPreDiagnosisValid)"
               class="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-vet-600 hover:bg-vet-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span v-if="isSubmitting" class="flex items-center">
                 <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Agendando...
+                {{ enablePreDiagnosis ? 'Agendando con IA...' : 'Agendando...' }}
               </span>
-              <span v-else>Agendar Cita</span>
+              <span v-else>
+                {{ enablePreDiagnosis ? 'Agendar con Prediagnóstico' : 'Agendar Cita' }}
+              </span>
             </button>
           </div>
         </form>
@@ -355,12 +474,16 @@ import petService from '@/services/petService'
 import veterinarianService from '@/services/veterinarianService'
 import appointmentService from '@/services/appointmentService'
 
+// Stores
+import { useDiagnosisStore } from '@/stores/diagnosis'
+
 // Components
 import ImageGallery from '../../components/common/ImageGallery.vue'
 
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
+const diagnosisStore = useDiagnosisStore()
 
 // Validation schema
 const schema = yup.object({
@@ -399,6 +522,16 @@ const disabledDates = ref([])
 // Image handling
 const imageUrls = ref([''])
 
+// Pre-diagnosis form
+const enablePreDiagnosis = ref(false)
+const preDiagnosisForm = ref({
+  symptoms: '',
+  duration: '',
+  severity: '',
+  additionalContext: ''
+})
+const preDiagnosisErrors = ref({})
+
 // Max date (3 months from now)
 const maxDate = computed(() => addDays(new Date(), 90))
 
@@ -422,6 +555,12 @@ const validImageUrls = computed(() => {
       return false
     }
   })
+})
+
+// Pre-diagnosis validation
+const isPreDiagnosisValid = computed(() => {
+  if (!enablePreDiagnosis.value) return true
+  return preDiagnosisForm.value.symptoms.trim().length >= 10
 })
 
 // Can submit
@@ -614,6 +753,107 @@ const formatDate = (date) => {
   return format(date, 'EEEE, d MMMM yyyy', { locale: es })
 }
 
+// Pre-diagnosis methods
+const validatePreDiagnosis = () => {
+  preDiagnosisErrors.value = {}
+  
+  if (enablePreDiagnosis.value) {
+    if (!preDiagnosisForm.value.symptoms.trim()) {
+      preDiagnosisErrors.value.symptoms = 'Los síntomas son obligatorios para el prediagnóstico'
+      return false
+    }
+    if (preDiagnosisForm.value.symptoms.trim().length < 10) {
+      preDiagnosisErrors.value.symptoms = 'Por favor describe los síntomas con más detalle (mínimo 10 caracteres)'
+      return false
+    }
+  }
+  
+  return true
+}
+
+const buildDiagnosisDescription = () => {
+  const parts = []
+  
+  if (preDiagnosisForm.value.symptoms.trim()) {
+    parts.push(`Síntomas: ${preDiagnosisForm.value.symptoms.trim()}`)
+  }
+  
+  if (preDiagnosisForm.value.duration) {
+    const durationLabels = {
+      'HOURS': 'pocas horas',
+      'TODAY': 'desde hoy',
+      'YESTERDAY': 'desde ayer',
+      'WEEK': 'esta semana',
+      'WEEKS': 'varias semanas',
+      'MONTH': 'un mes o más'
+    }
+    parts.push(`Duración: ${durationLabels[preDiagnosisForm.value.duration]}`)
+  }
+  
+  if (preDiagnosisForm.value.severity) {
+    const severityLabels = {
+      'MILD': 'leve',
+      'MODERATE': 'moderada',
+      'SEVERE': 'severa',
+      'CRITICAL': 'crítica'
+    }
+    parts.push(`Intensidad: ${severityLabels[preDiagnosisForm.value.severity]}`)
+  }
+  
+  if (preDiagnosisForm.value.additionalContext?.trim()) {
+    parts.push(`Contexto adicional: ${preDiagnosisForm.value.additionalContext.trim()}`)
+  }
+  
+  return parts.join('. ')
+}
+
+const createPreDiagnosis = async (appointmentId) => {
+  if (!enablePreDiagnosis.value || !preDiagnosisForm.value.symptoms.trim()) {
+    return null
+  }
+
+  try {
+    // Mapear severity de frontend a backend
+    const mapSeverity = (frontendSeverity) => {
+      const mapping = {
+        'MILD': 'mild',
+        'MODERATE': 'moderate', 
+        'SEVERE': 'severe',
+        'CRITICAL': 'severe' // Mapear critical a severe ya que backend no tiene critical
+      }
+      return mapping[frontendSeverity] || null
+    }
+
+    // Mapear duration de frontend a backend
+    const mapDuration = (frontendDuration) => {
+      const mapping = {
+        'HOURS': 'pocas horas',
+        'TODAY': 'desde hoy',
+        'YESTERDAY': 'desde ayer', 
+        'WEEK': 'esta semana',
+        'WEEKS': 'varias semanas',
+        'MONTH': 'un mes o más'
+      }
+      return mapping[frontendDuration] || null
+    }
+
+    const diagnosisData = {
+      petId: values.petId,
+      appointmentId,
+      symptoms: preDiagnosisForm.value.symptoms.trim(),
+      duration: mapDuration(preDiagnosisForm.value.duration),
+      severity: mapSeverity(preDiagnosisForm.value.severity),
+      additionalInfo: preDiagnosisForm.value.additionalContext?.trim() || null
+    }
+
+    return await diagnosisStore.createPreDiagnosis(diagnosisData)
+  } catch (error) {
+    console.error('Error creating pre-diagnosis:', error)
+    toast.warning('La cita se creó correctamente, pero hubo un problema con el prediagnóstico')
+    return null
+  }
+}
+
 const onSubmit = handleSubmit(async (formValues) => {
   try {
     isSubmitting.value = true
@@ -621,6 +861,11 @@ const onSubmit = handleSubmit(async (formValues) => {
     // Validaciones adicionales
     if (!formValues.type) {
       toast.error('Debes especificar el motivo de la consulta')
+      return
+    }
+    
+    // Validar prediagnóstico si está habilitado
+    if (enablePreDiagnosis.value && !validatePreDiagnosis()) {
       return
     }
     
@@ -646,9 +891,20 @@ const onSubmit = handleSubmit(async (formValues) => {
     
     console.log('Sending appointment data:', appointmentData)
     
-    await appointmentService.createAppointment(appointmentData)
+    // Crear la cita primero
+    const newAppointment = await appointmentService.createAppointment(appointmentData)
     
-    toast.success('Cita agendada exitosamente')
+    // Crear prediagnóstico si está habilitado
+    let diagnosis = null
+    if (enablePreDiagnosis.value) {
+      diagnosis = await createPreDiagnosis(newAppointment.id)
+    }
+    
+    const successMessage = enablePreDiagnosis.value 
+      ? 'Cita agendada exitosamente con prediagnóstico solicitado'
+      : 'Cita agendada exitosamente'
+    
+    toast.success(successMessage)
     router.push('/client/appointments')
     
   } catch (error) {

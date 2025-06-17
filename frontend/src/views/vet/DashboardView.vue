@@ -84,21 +84,21 @@
           <div class="p-5">
             <div class="flex items-center">
               <div class="flex-shrink-0">
-                <ExclamationTriangleIcon class="h-6 w-6 text-red-400" />
+                <span class="text-blue-400 text-2xl">🤖</span>
               </div>
               <div class="ml-5 w-0 flex-1">
                 <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">Alertas Médicas</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ stats.patientsWithAlerts }}</dd>
+                  <dt class="text-sm font-medium text-gray-500 truncate">Prediagnósticos IA</dt>
+                  <dd class="text-lg font-medium text-gray-900">{{ stats.preDiagnosisCount || 0 }}</dd>
                 </dl>
               </div>
             </div>
           </div>
           <div class="bg-gray-50 px-5 py-3">
             <div class="text-sm">
-              <router-link :to="{ name: 'vet-patients', query: { alerts: 'with' } }" class="font-medium text-red-600 hover:text-red-500">
-                Revisar alertas
-              </router-link>
+              <span class="font-medium text-blue-600">
+                {{ stats.preDiagnosisThisWeek || 0 }} esta semana
+              </span>
             </div>
           </div>
         </div>
@@ -155,9 +155,12 @@
                       </div>
                     </div>
                     <div class="min-w-0 flex-1">
-                      <p class="text-sm font-medium text-gray-900 truncate">
-                        {{ appointment.pet?.name || appointment.petName }}
-                      </p>
+                      <div class="flex items-center space-x-2">
+                        <p class="text-sm font-medium text-gray-900 truncate">
+                          {{ appointment.pet?.name || appointment.petName }}
+                        </p>
+                        <span v-if="appointment.preDiagnosis" class="text-lg" title="Prediagnóstico con IA disponible">🤖</span>
+                      </div>
                       <p class="text-xs text-gray-500 truncate">
                         {{ formatTime(appointment.scheduledAt || appointment.scheduled_at) }} • 
                         {{ getAppointmentTypeText(appointment.type) }}

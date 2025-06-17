@@ -143,6 +143,10 @@
                     <ClockIcon class="w-4 h-4" />
                     <span>{{ appointment.duration }} min</span>
                   </div>
+                  <div v-if="appointment.preDiagnosis || (appointment.aiDiagnoses && appointment.aiDiagnoses.length > 0)" class="flex items-center space-x-1">
+                    <span class="text-lg">🤖</span>
+                    <span class="text-blue-600 font-medium">Prediagnóstico IA</span>
+                  </div>
                   <div v-if="appointment.notes" class="flex items-center space-x-1">
                     <DocumentTextIcon class="w-4 h-4" />
                     <span>Con notas</span>
@@ -316,6 +320,16 @@ const loadAppointments = async () => {
     
     const response = await appointmentService.getMyAppointments(params)
     appointments.value = response.data || response
+    
+    // Debug: verificar prediagnósticos
+    appointments.value.forEach(apt => {
+      if (apt.aiDiagnoses && apt.aiDiagnoses.length > 0) {
+        console.log(`Cita ${apt.id} tiene ${apt.aiDiagnoses.length} diagnóstico(s) de IA:`, apt.aiDiagnoses)
+      }
+      if (apt.preDiagnosis) {
+        console.log(`Cita ${apt.id} tiene preDiagnosis:`, apt.preDiagnosis)
+      }
+    })
     
     // Actualizar información de paginación si está disponible
     if (response.totalPages) {

@@ -9,10 +9,24 @@ export const medicalRecordService = {
     return response.data
   },
 
+  // Método de compatibilidad para el store
+  async getMedicalRecords(petId = null, filters = {}) {
+    if (petId) {
+      return this.getPetMedicalRecords(petId, filters.page || 1, filters.limit || 100)
+    } else {
+      return this.getVeterinarianMedicalRecords(filters)
+    }
+  },
+
   // Obtener un registro médico por ID
   async getMedicalRecordById(id) {
     const response = await apiClient.get(`/medical-records/${id}`)
     return response.data
+  },
+
+  // Método de compatibilidad para el store
+  async getMedicalRecord(id) {
+    return this.getMedicalRecordById(id)
   },
 
   // Crear nuevo registro médico
@@ -23,7 +37,7 @@ export const medicalRecordService = {
 
   // Actualizar registro médico
   async updateMedicalRecord(id, recordData) {
-    const response = await apiClient.put(`/medical-records/${id}`, recordData)
+    const response = await apiClient.patch(`/medical-records/${id}`, recordData)
     return response.data
   },
 

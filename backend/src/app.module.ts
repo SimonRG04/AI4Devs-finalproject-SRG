@@ -24,6 +24,7 @@ import { PetsModule } from './modules/pets/pets.module';
 import { AppointmentsModule } from './modules/appointments/appointments.module';
 import { MedicalModule } from './modules/medical/medical.module';
 import { VeterinariansModule } from './modules/veterinarians/veterinarians.module';
+import { DiagnosisModule } from './modules/diagnosis/diagnosis.module';
 // import { UsersModule } from './modules/users/users.module';
 // import { DiagnosisModule } from './modules/diagnosis/diagnosis.module';
 // import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -74,6 +75,7 @@ import { VeterinariansModule } from './modules/veterinarians/veterinarians.modul
     AppointmentsModule,
     MedicalModule,
     VeterinariansModule,
+    DiagnosisModule,
     // UsersModule,
     // DiagnosisModule,
     // NotificationsModule,

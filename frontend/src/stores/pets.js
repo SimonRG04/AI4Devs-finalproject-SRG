@@ -89,6 +89,9 @@ export const usePetsStore = defineStore('pets', () => {
       // Agregar la nueva mascota a la lista
       pets.value.push(newPet)
       
+      // Refrescar todas las mascotas para asegurar sincronización
+      setTimeout(() => refreshAllPets(), 1000)
+      
       return newPet
     } catch (err) {
       error.value = err.response?.data?.message || 'Error al crear mascota'
@@ -116,6 +119,9 @@ export const usePetsStore = defineStore('pets', () => {
       if (currentPet.value?.id === id) {
         currentPet.value = updatedPet
       }
+      
+      // Refrescar datos del servidor para asegurar sincronización
+      setTimeout(() => refreshPet(id), 500)
       
       return updatedPet
     } catch (err) {
@@ -174,6 +180,37 @@ export const usePetsStore = defineStore('pets', () => {
     error.value = null
   }
 
+  // Métodos de refresh para sincronización automática
+  const refreshPet = async (id) => {
+    try {
+      const response = await petService.getPet(id)
+      const refreshedPet = response.data || response
+      
+      // Actualizar en la lista si existe
+      const index = pets.value.findIndex(pet => pet.id === id)
+      if (index !== -1) {
+        pets.value[index] = refreshedPet
+      }
+      
+      // Actualizar mascota actual si es la misma
+      if (currentPet.value?.id === id) {
+        currentPet.value = refreshedPet
+      }
+      
+      return refreshedPet
+    } catch (err) {
+      console.warn('Error refreshing pet:', err)
+    }
+  }
+
+  const refreshAllPets = async (clientId = null) => {
+    try {
+      await fetchPets(clientId)
+    } catch (err) {
+      console.warn('Error refreshing all pets:', err)
+    }
+  }
+
   return {
     // Estado
     pets,
@@ -197,6 +234,10 @@ export const usePetsStore = defineStore('pets', () => {
     clearCurrentPet,
     setFilters,
     clearFilters,
-    clearError
+    clearError,
+    
+    // Métodos de refresh
+    refreshPet,
+    refreshAllPets
   }
 }) 

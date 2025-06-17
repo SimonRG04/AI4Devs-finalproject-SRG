@@ -83,15 +83,17 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <p class="text-sm font-medium text-gray-500">Nombre</p>
-                <p class="mt-1 text-sm text-gray-900">{{ (pet.owner?.firstName || pet.owner?.first_name) + ' ' + (pet.owner?.lastName || pet.owner?.last_name) }}</p>
+                <p class="mt-1 text-sm text-gray-900">
+                  {{ getOwnerName(pet) }}
+                </p>
               </div>
               <div>
                 <p class="text-sm font-medium text-gray-500">Teléfono</p>
-                <p class="mt-1 text-sm text-gray-900">{{ pet.owner?.phone || 'No disponible' }}</p>
+                <p class="mt-1 text-sm text-gray-900">{{ getOwnerPhone(pet) }}</p>
               </div>
               <div>
                 <p class="text-sm font-medium text-gray-500">Email</p>
-                <p class="mt-1 text-sm text-gray-900">{{ pet.owner?.email }}</p>
+                <p class="mt-1 text-sm text-gray-900">{{ getOwnerEmail(pet) }}</p>
               </div>
             </div>
           </div>
@@ -146,7 +148,7 @@
                         <h5 class="text-sm font-medium text-gray-900 mb-1">Prescripciones:</h5>
                         <ul class="text-sm text-gray-700 space-y-1">
                           <li v-for="prescription in record.prescriptions" :key="prescription.id">
-                            • {{ prescription.medicationName }} - {{ prescription.dosage }} ({{ prescription.frequency }})
+                            • {{ prescription.medication || prescription.medicationName }} - {{ prescription.dosage }} ({{ prescription.frequency }})
                           </li>
                         </ul>
                       </div>
@@ -321,6 +323,15 @@
       @created="handleRecordCreated"
     />
 
+    <!-- Edit Medical Record Modal -->
+    <NewMedicalRecordModal
+      v-if="showEditRecordModal && editingRecord"
+      :pet-id="petId"
+      :editing-record="editingRecord"
+      @close="showEditRecordModal = false"
+      @created="handleRecordUpdated"
+    />
+
     <!-- New Appointment Modal -->
     <NewAppointmentModal
       v-if="showAppointmentModal"
@@ -360,6 +371,9 @@ import {
   EyeIcon
 } from '@heroicons/vue/24/outline'
 
+// Composables
+import { useDetailViewRefresh } from '../../composables/useAutoRefresh'
+
 // Components
 import NewMedicalRecordModal from '../../components/modals/NewMedicalRecordModal.vue'
 import NewAppointmentModal from '../../components/modals/NewAppointmentModal.vue'
@@ -372,6 +386,13 @@ const toast = useToast()
 const petsStore = usePetsStore()
 const appointmentsStore = useAppointmentsStore()
 const medicalRecordsStore = useMedicalRecordsStore()
+
+// Auto-refresh setup
+const { refresh: refreshAll } = useDetailViewRefresh([
+  () => loadMedicalRecords(),
+  () => loadAppointments(),
+  () => loadVaccinations()
+])
 
 // Props
 const props = defineProps({
@@ -388,8 +409,10 @@ const loading = ref(true)
 const error = ref(null)
 const activeTab = ref('history')
 const showNewRecordModal = ref(false)
+const showEditRecordModal = ref(false)
 const showAppointmentModal = ref(false)
 const showNewAppointmentModal = ref(false)
+const editingRecord = ref(null)
 const petNotes = ref('')
 const notesLoading = ref(false)
 
@@ -412,17 +435,29 @@ const loadPetData = async () => {
     loading.value = true
     error.value = null
     
-    // Load pet details
+    // Load pet details (now includes medical records)
     const petData = await petsStore.fetchPet(petId.value)
     pet.value = petData
     petNotes.value = petData.notes || ''
     
-    // Load related data
-    await Promise.all([
-      loadMedicalRecords(),
-      loadAppointments(),
-      loadVaccinations()
-    ])
+    // Extract medical records from pet data if available
+    if (petData.medicalRecords && Array.isArray(petData.medicalRecords)) {
+      medicalRecords.value = petData.medicalRecords
+    } else {
+      // Fallback to separate call if not included
+      await loadMedicalRecords()
+    }
+    
+    // Extract appointments from pet data if available
+    if (petData.appointments && Array.isArray(petData.appointments)) {
+      appointments.value = petData.appointments
+    } else {
+      // Fallback to separate call if not included
+      await loadAppointments()
+    }
+    
+    // Load vaccinations (not included in pet response yet)
+    await loadVaccinations()
     
   } catch (err) {
     console.error('Error loading pet data:', err)
@@ -435,9 +470,19 @@ const loadPetData = async () => {
 const loadMedicalRecords = async () => {
   try {
     const records = await medicalRecordsStore.fetchByPetId(petId.value)
-    medicalRecords.value = records
+    
+    // Asegurar que records sea un array
+    if (Array.isArray(records)) {
+      medicalRecords.value = records
+    } else if (records && records.data && Array.isArray(records.data)) {
+      medicalRecords.value = records.data
+    } else {
+      console.warn('Unexpected records structure:', records)
+      medicalRecords.value = []
+    }
   } catch (err) {
     console.error('Error loading medical records:', err)
+    medicalRecords.value = [] // Asegurar que siempre sea un array
   }
 }
 
@@ -500,23 +545,50 @@ const getStatusLabel = (status) => {
   return translate('appointmentStatus', status)
 }
 
-const handleRecordCreated = (newRecord) => {
+const handleRecordCreated = async (newRecord) => {
+  // Asegurar que medicalRecords.value sea un array
+  if (!Array.isArray(medicalRecords.value)) {
+    console.warn('medicalRecords.value is not an array, initializing as empty array')
+    medicalRecords.value = []
+  }
+  
   medicalRecords.value.unshift(newRecord)
   showNewRecordModal.value = false
   activeTab.value = 'history'
   toast.success('Registro médico creado exitosamente')
+  
+  // Refrescar datos automáticamente
+  setTimeout(() => refreshAll(), 1500)
 }
 
-const handleAppointmentCreated = (newAppointment) => {
+const handleRecordUpdated = async (updatedRecord) => {
+  // Encontrar y actualizar el registro en la lista
+  const index = medicalRecords.value.findIndex(record => record.id === updatedRecord.id)
+  if (index !== -1) {
+    medicalRecords.value[index] = updatedRecord
+  }
+  
+  showEditRecordModal.value = false
+  editingRecord.value = null
+  toast.success('Registro médico actualizado exitosamente')
+  
+  // Refrescar datos automáticamente
+  setTimeout(() => refreshAll(), 1000)
+}
+
+const handleAppointmentCreated = async (newAppointment) => {
   appointments.value.unshift(newAppointment)
   showAppointmentModal.value = false
   activeTab.value = 'appointments'
   toast.success('Cita agendada exitosamente')
+  
+  // Refrescar datos automáticamente
+  setTimeout(() => refreshAll(), 1000)
 }
 
 const editRecord = (record) => {
-  // Navigate to edit medical record
-  router.push(`/vet/medical-records/${record.id}/edit`)
+  editingRecord.value = { ...record }
+  showEditRecordModal.value = true
 }
 
 const viewAppointment = (appointment) => {
@@ -561,6 +633,36 @@ const getSpeciesText = (species) => {
 
 const getGenderText = (gender) => {
   return translate('petGender', gender)
+}
+
+// Helper functions para datos del propietario
+const getOwnerName = (pet) => {
+  if (!pet) return 'No disponible'
+  
+  // Intentar diferentes estructuras de datos
+  const owner = pet.owner || pet.client?.user || pet.client
+  if (!owner) return 'No disponible'
+  
+  const firstName = owner.firstName || owner.first_name || ''
+  const lastName = owner.lastName || owner.last_name || ''
+  
+  if (!firstName && !lastName) return 'No disponible'
+  
+  return `${firstName} ${lastName}`.trim()
+}
+
+const getOwnerPhone = (pet) => {
+  if (!pet) return 'No disponible'
+  
+  const owner = pet.owner || pet.client?.user || pet.client
+  return owner?.phone || 'No disponible'
+}
+
+const getOwnerEmail = (pet) => {
+  if (!pet) return 'No disponible'
+  
+  const owner = pet.owner || pet.client?.user || pet.client
+  return owner?.email || 'No disponible'
 }
 
 // Lifecycle

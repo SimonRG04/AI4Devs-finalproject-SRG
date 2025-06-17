@@ -166,6 +166,23 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     }
   }
 
+  const fetchAppointmentsByDate = async (date) => {
+    try {
+      loading.value = true
+      error.value = null
+      
+      const response = await appointmentService.getAppointments({ date })
+      const dateAppointments = response.data || response
+      
+      return Array.isArray(dateAppointments) ? dateAppointments : []
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Error al cargar citas por fecha'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const bookAppointment = async (appointmentData) => {
     try {
       loading.value = true
@@ -176,6 +193,9 @@ export const useAppointmentsStore = defineStore('appointments', () => {
       
       // Agregar la nueva cita a la lista
       appointments.value.push(newAppointment)
+      
+      // Refrescar todas las citas para asegurar sincronización
+      setTimeout(() => refreshAllAppointments(), 1000)
       
       return newAppointment
     } catch (err) {
@@ -204,6 +224,9 @@ export const useAppointmentsStore = defineStore('appointments', () => {
       if (currentAppointment.value?.id === id) {
         currentAppointment.value = updatedAppointment
       }
+      
+      // Refrescar datos del servidor para asegurar sincronización
+      setTimeout(() => refreshAppointment(id), 500)
       
       return updatedAppointment
     } catch (err) {
@@ -327,6 +350,37 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     error.value = null
   }
 
+  // Métodos de refresh para sincronización automática
+  const refreshAppointment = async (id) => {
+    try {
+      const response = await appointmentService.getAppointment(id)
+      const refreshedAppointment = response.data || response
+      
+      // Actualizar en la lista si existe
+      const index = appointments.value.findIndex(app => app.id === id)
+      if (index !== -1) {
+        appointments.value[index] = refreshedAppointment
+      }
+      
+      // Actualizar cita actual si es la misma
+      if (currentAppointment.value?.id === id) {
+        currentAppointment.value = refreshedAppointment
+      }
+      
+      return refreshedAppointment
+    } catch (err) {
+      console.warn('Error refreshing appointment:', err)
+    }
+  }
+
+  const refreshAllAppointments = async () => {
+    try {
+      await fetchAppointments()
+    } catch (err) {
+      console.warn('Error refreshing all appointments:', err)
+    }
+  }
+
   // Utilidades para formateo
   const formatAppointmentDate = (dateString) => {
     return format(parseISO(dateString), 'PPpp', { locale: es })
@@ -370,6 +424,7 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     fetchAppointment,
     fetchAvailability,
     fetchByPetId,
+    fetchAppointmentsByDate,
     bookAppointment,
     updateAppointment,
     cancelAppointment,
@@ -381,6 +436,10 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     setFilters,
     clearFilters,
     clearError,
+    
+    // Métodos de refresh
+    refreshAppointment,
+    refreshAllAppointments,
     
     // Utilidades
     formatAppointmentDate,

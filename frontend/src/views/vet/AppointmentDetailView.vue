@@ -250,6 +250,144 @@
             </div>
           </div>
 
+          <!-- Pre-diagnosis Section -->
+          <div v-if="preDiagnosis" class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                  🤖 Prediagnóstico con IA
+                  <span 
+                    :class="[
+                      'ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                      getDiagnosisStatusColor(preDiagnosis.status)
+                    ]"
+                  >
+                    {{ getDiagnosisStatusText(preDiagnosis.status) }}
+                  </span>
+                </h3>
+                <div class="flex items-center space-x-2">
+                  <button
+                    v-if="preDiagnosis.status === 'PENDING' || preDiagnosis.status === 'PROCESSING'"
+                    @click="refreshDiagnosis"
+                    class="text-sm text-primary-600 hover:text-primary-800"
+                  >
+                    Actualizar
+                  </button>
+                  <button
+                    v-if="!preDiagnosis && appointment.status !== 'COMPLETED'"
+                    @click="showPreDiagnosisModal = true"
+                    class="text-sm text-primary-600 hover:text-primary-800"
+                  >
+                    Solicitar Prediagnóstico
+                  </button>
+                </div>
+              </div>
+
+              <!-- Diagnosis Loading State -->
+              <div v-if="preDiagnosis.status === 'PENDING' || preDiagnosis.status === 'PROCESSING'" 
+                   class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-center">
+                  <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-3"></div>
+                  <div>
+                    <h5 class="text-sm font-medium text-blue-800">
+                      {{ preDiagnosis.status === 'PENDING' ? 'Preparando análisis...' : 'Analizando síntomas...' }}
+                    </h5>
+                    <p class="text-sm text-blue-600 mt-1">
+                      El sistema de IA está procesando la información. Esto puede tomar unos minutos.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Diagnosis Results -->
+              <div v-else-if="preDiagnosis.status === 'COMPLETED' && preDiagnosis.results" class="space-y-4">
+                <!-- Professional AI Analysis Card -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                  <h4 class="text-sm font-semibold text-blue-900 mb-3 flex items-center">
+                    <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    Análisis de IA - Orientación Preliminar
+                  </h4>
+                  
+                  <!-- Conditions -->
+                  <div v-if="preDiagnosis.results.conditions?.length" class="space-y-3">
+                    <div
+                      v-for="(condition, index) in preDiagnosis.results.conditions"
+                      :key="index"
+                      class="bg-white rounded-lg p-3 border"
+                    >
+                      <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-sm font-medium text-gray-900">{{ condition.name }}</h5>
+                        <div class="flex items-center space-x-2">
+                          <span 
+                            :class="[
+                              'px-2 py-1 rounded-full text-xs font-medium',
+                              getSeverityBadgeClass(condition.severity)
+                            ]"
+                          >
+                            {{ getSeverityText(condition.severity) }}
+                          </span>
+                          <span class="text-xs text-gray-500">{{ Math.round(condition.probability * 100) }}%</span>
+                        </div>
+                      </div>
+                      <p class="text-sm text-gray-700">{{ condition.description }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Recommendations -->
+                  <div v-if="preDiagnosis.results.recommendations?.length" class="mt-4">
+                    <h5 class="text-sm font-medium text-gray-900 mb-2">Recomendaciones del sistema:</h5>
+                    <ul class="list-disc list-inside space-y-1">
+                      <li v-for="(rec, index) in preDiagnosis.results.recommendations" :key="index" 
+                          class="text-sm text-gray-700">
+                        {{ rec }}
+                      </li>
+                    </ul>
+                  </div>
+
+                  <!-- Confidence and metadata -->
+                  <div class="mt-4 pt-3 border-t border-blue-200 flex items-center justify-between text-xs text-blue-700">
+                    <span>Confianza del análisis: {{ Math.round((preDiagnosis.confidence || preDiagnosis.results.confidence || 0) * 100) }}%</span>
+                    <span>Procesado el {{ formatDateTime(preDiagnosis.processedAt) }}</span>
+                  </div>
+                </div>
+
+                <!-- Original symptoms reported -->
+                <div class="bg-gray-50 rounded-lg p-4 border">
+                  <h5 class="text-sm font-medium text-gray-900 mb-2">Síntomas reportados por el propietario:</h5>
+                  <p class="text-sm text-gray-700">{{ preDiagnosis.description }}</p>
+                  <p class="text-xs text-gray-500 mt-2">
+                    Reportado el {{ formatDateTime(preDiagnosis.createdAt) }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Diagnosis Error State -->
+              <div v-else-if="preDiagnosis.status === 'FAILED'" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex">
+                  <ExclamationTriangleIcon class="h-5 w-5 text-red-400" />
+                  <div class="ml-3">
+                    <h5 class="text-sm font-medium text-red-800">Error en el análisis</h5>
+                    <p class="text-sm text-red-700 mt-1">
+                      No se pudo completar el análisis de los síntomas. 
+                      Proceda con la evaluación clínica tradicional.
+                    </p>
+                    <p v-if="preDiagnosis.errorMessage" class="text-xs text-red-600 mt-2">
+                      Detalle: {{ preDiagnosis.errorMessage }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Professional Disclaimer -->
+              <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p class="text-xs text-yellow-800">
+                  <strong>🏥 Nota Profesional:</strong> Este prediagnóstico es una herramienta de apoyo basada en IA. 
+                  Utilice esta información como orientación inicial, pero base su diagnóstico final en su evaluación clínica profesional.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- Recent Medical History -->
           <div class="bg-white shadow rounded-lg">
             <div class="px-4 py-5 sm:p-6">
@@ -417,7 +555,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppointmentsStore } from '../../stores/appointments'
 import { useMedicalRecordsStore } from '../../stores/medicalRecords'
@@ -471,6 +609,7 @@ const props = defineProps({
 // State
 const appointmentId = computed(() => props.id || route.params.id)
 const appointment = ref(null)
+const preDiagnosis = ref(null)
 const loading = ref(true)
 const error = ref(null)
 const recentRecords = ref([])
@@ -478,6 +617,7 @@ const showActionsMenu = ref(false)
 const showNewRecordModal = ref(false)
 const showRescheduleModal = ref(false)
 const showNotesModal = ref(false)
+const showPreDiagnosisModal = ref(false)
 const actionsDropdown = ref(null)
 
 // Computed properties
@@ -534,6 +674,7 @@ const loadAppointmentData = async () => {
     
     const appointmentData = await appointmentsStore.fetchAppointment(appointmentId.value)
     appointment.value = appointmentData
+    preDiagnosis.value = appointmentData.preDiagnosis
     
     // Load recent medical records for the pet
     if (appointmentData.pet?.id) {
@@ -659,9 +800,79 @@ const handleNotesUpdated = (updatedAppointment) => {
   toast.success('Notas actualizadas correctamente')
 }
 
+// Pre-diagnosis functions
+const getDiagnosisStatusColor = (status) => {
+  const classes = {
+    'PENDING': 'bg-yellow-100 text-yellow-800',
+    'PROCESSING': 'bg-blue-100 text-blue-800',
+    'COMPLETED': 'bg-green-100 text-green-800',
+    'FAILED': 'bg-red-100 text-red-800'
+  }
+  return classes[status] || 'bg-gray-100 text-gray-800'
+}
+
+const getDiagnosisStatusText = (status) => {
+  return translate('preDiagnosisStatus', status)
+}
+
+const getSeverityBadgeClass = (severity) => {
+  const classes = {
+    'LOW': 'bg-green-100 text-green-800',
+    'MEDIUM': 'bg-yellow-100 text-yellow-800',
+    'HIGH': 'bg-red-100 text-red-800'
+  }
+  return classes[severity] || 'bg-gray-100 text-gray-800'
+}
+
+const getSeverityText = (severity) => {
+  const severityLabels = {
+    'LOW': 'Baja',
+    'MEDIUM': 'Media',
+    'HIGH': 'Alta'
+  }
+  return severityLabels[severity] || severity
+}
+
+const refreshDiagnosis = async () => {
+  try {
+    await loadAppointmentData()
+    toast.success('Prediagnóstico actualizado exitosamente')
+  } catch (error) {
+    console.error('Error refreshing pre-diagnosis:', error)
+    toast.error('Error al actualizar el prediagnóstico')
+  }
+}
+
 const handleClickOutside = (event) => {
   if (actionsDropdown.value && !actionsDropdown.value.contains(event.target)) {
     showActionsMenu.value = false
+  }
+}
+
+// Reactive state for polling
+const pollingInterval = ref(null)
+
+// Polling for pre-diagnosis updates
+const startPollingPreDiagnosis = () => {
+  if (pollingInterval.value) return // Ya está corriendo
+  
+  pollingInterval.value = setInterval(async () => {
+    if (preDiagnosis.value && (preDiagnosis.value.status === 'PENDING' || preDiagnosis.value.status === 'PROCESSING')) {
+      try {
+        await loadAppointmentData() // Recargar toda la cita es más seguro que acceso directo al diagnóstico
+      } catch (error) {
+        console.error('Error polling pre-diagnosis:', error)
+      }
+    } else {
+      stopPollingPreDiagnosis() // Detener polling si ya no es necesario
+    }
+  }, 10000) // Cada 10 segundos
+}
+
+const stopPollingPreDiagnosis = () => {
+  if (pollingInterval.value) {
+    clearInterval(pollingInterval.value)
+    pollingInterval.value = null
   }
 }
 
@@ -673,5 +884,15 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  stopPollingPreDiagnosis() // Cleanup polling
 })
+
+// Start polling if there's a pending pre-diagnosis
+watch(() => preDiagnosis.value, (newPreDiagnosis) => {
+  if (newPreDiagnosis && (newPreDiagnosis.status === 'PENDING' || newPreDiagnosis.status === 'PROCESSING')) {
+    startPollingPreDiagnosis()
+  } else {
+    stopPollingPreDiagnosis()
+  }
+}, { immediate: true })
 </script> 
