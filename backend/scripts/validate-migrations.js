@@ -69,7 +69,8 @@ function validateMigrationIntegrity() {
   // Aquí puedes agregar más validaciones específicas
   const criticalMigrations = [
     '1749000000000-InitialDatabaseSchema.ts',
-    '1750120000000-CreateDiagnosisTable.ts'
+    '1750120000000-CreateDiagnosisTable.ts',
+    '1750300000000-FixProductionSchema.ts'
   ];
   
   let allValid = true;
