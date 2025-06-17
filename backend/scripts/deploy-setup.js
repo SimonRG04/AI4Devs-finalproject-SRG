@@ -1,138 +1,72 @@
 #!/usr/bin/env node
 
+const fs = require('fs');
+const path = require('path');
 const { execSync } = require('child_process');
 
-function log(message) {
-  console.log(`[DEPLOY-SETUP] ${message}`);
-}
-
-function runCommand(command, description) {
+function executeCommand(command, description) {
+  console.log(`\n🔨 ${description}...`);
   try {
-    log(`Ejecutando: ${description}`);
-    execSync(command, { stdio: 'inherit' });
-    log(`✅ ${description} completado exitosamente`);
+    const output = execSync(command, { 
+      cwd: __dirname + '/../',
+      stdio: 'inherit'
+    });
+    console.log(`✅ ${description} completado`);
     return true;
   } catch (error) {
-    log(`❌ Error en ${description}: ${error.message}`);
-    process.exit(1);
-  }
-}
-
-function isFirstDeploy() {
-  return process.env.IS_FIRST_DEPLOY === 'true';
-}
-
-function validateConfig() {
-  const IS_FIRST_DEPLOY = isFirstDeploy();
-  const RUN_MIGRATIONS = process.env.RUN_MIGRATIONS === 'true';
-  const RUN_SEEDS = process.env.RUN_SEEDS === 'true';
-
-  log('🔍 Validando configuración de deploy...');
-  log(`📋 Configuración detectada:`);
-  log(`- IS_FIRST_DEPLOY: ${IS_FIRST_DEPLOY}`);
-  log(`- RUN_MIGRATIONS: ${RUN_MIGRATIONS}`);
-  log(`- RUN_SEEDS: ${RUN_SEEDS}`);
-
-  if (IS_FIRST_DEPLOY && !RUN_MIGRATIONS) {
-    log('❌ ERROR: Para primer deploy se requiere RUN_MIGRATIONS=true');
-    process.exit(1);
-  }
-
-  return { IS_FIRST_DEPLOY, RUN_MIGRATIONS, RUN_SEEDS };
-}
-
-async function runFirstDeployMigration() {
-  log('🎯 Ejecutando PRIMER DEPLOY - Solo RecreateFullSchema');
-  
-  // Crear comando específico para ejecutar solo RecreateFullSchema
-  const specificMigration = '1750400000000-RecreateFullSchema';
-  
-  try {
-    // Primero verificar el estado actual
-    log('📊 Verificando estado actual de migraciones...');
-    try {
-      execSync('npm run migration:show', { stdio: 'pipe' });
-    } catch (e) {
-      log('📝 BD nueva o sin migraciones previas (esperado para primer deploy)');
-    }
-    
-    // Ejecutar solo la migración de recreación
-    log('🗃️  Ejecutando RecreateFullSchema...');
-    log('   ⚠️  IMPORTANTE: Se eliminará y recreará toda la estructura');
-    log('   🎯 Objetivo: BD idéntica a DatabaseTables.sql');
-    
-    // Comando para ejecutar todas las migraciones (RecreateFullSchema será la última)
-    execSync('npm run migration:run', { stdio: 'inherit' });
-    
-    log('✅ RecreateFullSchema ejecutada exitosamente');
-    
-  } catch (error) {
-    log(`❌ Error ejecutando RecreateFullSchema: ${error.message}`);
-    process.exit(1);
+    console.error(`❌ Error en ${description}:`, error.message);
+    return false;
   }
 }
 
 async function main() {
-  log('🚀 Iniciando deploy de VetAI Connect...');
-
-  // Validar configuración
-  const config = validateConfig();
+  console.log('🚀 Iniciando setup de deploy para VetAI Connect');
+  console.log('🧹 Usando migración limpia: CleanAndRecreateSchema');
   
-  if (config.IS_FIRST_DEPLOY) {
-    log('🎯 MODO: PRIMER DEPLOY');
-    log('📋 ESTRATEGIA: Ejecutar solo RecreateFullSchema');
-    log('🎯 RESULTADO: BD desde cero idéntica a DatabaseTables.sql');
-  } else {
-    log('📈 MODO: DEPLOY INCREMENTAL');
-    log('📋 ESTRATEGIA: Migraciones pendientes normalmente');
+  // Validar que existe la migración
+  const migrationPath = path.join(__dirname, '../src/database/migrations/1750500000000-CleanAndRecreateSchema.ts');
+  if (!fs.existsSync(migrationPath)) {
+    console.error('❌ Error: No se encontró la migración CleanAndRecreateSchema.ts');
+    process.exit(1);
+  }
+  
+  console.log('✅ Migración CleanAndRecreateSchema encontrada');
+  
+  // Ejecutar validaciones
+  if (!executeCommand('node scripts/validate-migrations.js', 'Validando migración')) {
+    process.exit(1);
   }
 
-  // 1. VALIDAR CONFIGURACIÓN
-  log('🔍 Paso 1: Validando configuración...');
-  runCommand('npm run migration:validate', 'Validación de configuración');
-
-  // 2. EJECUTAR MIGRACIONES
-  if (config.RUN_MIGRATIONS) {
-    if (config.IS_FIRST_DEPLOY) {
-      // Primer deploy: ejecutar solo RecreateFullSchema
-      await runFirstDeployMigration();
-    } else {
-      // Deploy incremental: ejecutar migraciones pendientes
-      log('🗃️  Paso 2: Ejecutando migraciones incrementales...');
-      runCommand('npm run migration:run', 'Migraciones incrementales');
+  // Ejecutar migraciones
+  if (process.env.RUN_MIGRATIONS === 'true') {
+    console.log('\n🗄️ Ejecutando migración de base de datos...');
+    console.log('⚠️  Esta migración eliminará TODA la estructura existente');
+    console.log('⚠️  Y la recreará desde cero con la estructura correcta');
+    
+    if (!executeCommand('npm run migration:run', 'Ejecutando migración CleanAndRecreateSchema')) {
+      console.error('❌ Error ejecutando migración');
+      process.exit(1);
     }
   } else {
-    log('⏭️  Paso 2: Saltando migraciones (RUN_MIGRATIONS=false)');
+    console.log('\n⏭️ Saltando migraciones (RUN_MIGRATIONS no está configurado)');
   }
 
-  // 3. EJECUTAR SEEDS
-  if (config.RUN_SEEDS) {
-    log('🌱 Paso 3: Ejecutando seeds de datos iniciales...');
-    runCommand('npm run seed', 'Inserción de datos iniciales');
+  // Ejecutar seeds
+  if (process.env.RUN_SEEDS === 'true') {
+    if (!executeCommand('npm run seed:run', 'Ejecutando seeds de datos iniciales')) {
+      console.error('❌ Error ejecutando seeds');
+      process.exit(1);
+    }
   } else {
-    log('⏭️  Paso 3: Saltando seeds (RUN_SEEDS=false)');
+    console.log('\n⏭️ Saltando seeds (RUN_SEEDS no está configurado)');
   }
 
-  // 4. RESUMEN FINAL
-  log('🎉 DEPLOY COMPLETADO EXITOSAMENTE');
-  log('==========================================');
-  
-  if (config.IS_FIRST_DEPLOY) {
-    log('✅ PRIMER DEPLOY realizado correctamente');
-    log('✅ BD creada desde cero con RecreateFullSchema');
-    log('✅ Estructura idéntica a DatabaseTables.sql');
-    log('✅ Sin conflictos de migraciones anteriores');
-  } else {
-    log('✅ DEPLOY INCREMENTAL realizado correctamente');
-    log('✅ Migraciones pendientes aplicadas');
-  }
-  
-  log('✅ VetAI Connect listo para producción');
-  log('==========================================');
+  console.log('\n🎉 Deploy setup completado exitosamente!');
+  console.log('✅ Base de datos lista con estructura limpia');
+  console.log('🎯 Estructura idéntica a DatabaseTables.sql aplicada');
 }
 
 main().catch(error => {
-  log(`❌ ERROR FATAL: ${error.message}`);
-  log('🔧 Revisar configuración y volver a intentar');
+  console.error('💥 Error en deploy setup:', error);
   process.exit(1);
 }); 
