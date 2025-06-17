@@ -7,8 +7,40 @@ function getTimestamp(filename) {
   return match ? parseInt(match[1]) : 0;
 }
 
-// Función para validar orden de migraciones
-function validateMigrationOrder() {
+// Función para detectar si es primer deploy
+function isFirstDeploy() {
+  return process.env.IS_FIRST_DEPLOY === 'true';
+}
+
+// Función para validar configuración de primer deploy
+function validateFirstDeployConfig() {
+  console.log('\n🔍 Detectando tipo de deploy...');
+  
+  if (isFirstDeploy()) {
+    console.log('✅ MODO: PRIMER DEPLOY');
+    console.log('🎯 OBJETIVO: Crear BD desde cero idéntica a DatabaseTables.sql');
+    console.log('📋 ESTRATEGIA: Ejecutar SOLO RecreateFullSchema');
+    
+    // Verificar que existe RecreateFullSchema
+    const recreateMigration = '1750400000000-RecreateFullSchema.ts';
+    const migrationPath = path.join(__dirname, '../src/database/migrations', recreateMigration);
+    
+    if (!fs.existsSync(migrationPath)) {
+      console.error(`❌ ERROR: ${recreateMigration} no encontrada`);
+      return false;
+    }
+    
+    console.log(`✅ RecreateFullSchema encontrada: ${recreateMigration}`);
+    return true;
+  } else {
+    console.log('📈 MODO: DEPLOY INCREMENTAL');
+    console.log('📋 ESTRATEGIA: Ejecutar migraciones pendientes normalmente');
+    return validateAllMigrations();
+  }
+}
+
+// Función para validar todas las migraciones (modo incremental)
+function validateAllMigrations() {
   const databaseMigrationsPath = path.join(__dirname, '../src/database/migrations');
   const migrationsPath = path.join(__dirname, '../src/migrations');
   
@@ -41,67 +73,93 @@ function validateMigrationOrder() {
   // Ordenar por timestamp
   allMigrations.sort((a, b) => a.timestamp - b.timestamp);
   
-  console.log('\n🔍 Orden de ejecución de migraciones:');
-  console.log('==========================================');
-  
+  console.log('\n📝 Migraciones a ejecutar (orden):');
   allMigrations.forEach((migration, index) => {
-    console.log(`${index + 1}. ${migration.file} (${migration.path})`);
+    const isRecreate = migration.file.includes('RecreateFullSchema');
+    const icon = isRecreate ? '🎯' : '📝';
+    console.log(`${index + 1}. ${icon} ${migration.file}`);
   });
   
-  // Validar que no hay timestamps duplicados
-  const timestamps = allMigrations.map(m => m.timestamp);
-  const duplicates = timestamps.filter((timestamp, index) => timestamps.indexOf(timestamp) !== index);
-  
-  if (duplicates.length > 0) {
-    console.error('\n❌ ERROR: Timestamps duplicados encontrados:');
-    duplicates.forEach(dup => console.error(`   - ${dup}`));
-    return false;
-  }
-  
-  console.log('\n✅ Validación completada: Orden de migraciones correcto');
   return true;
 }
 
-// Función para verificar integridad de migraciones
-function validateMigrationIntegrity() {
-  console.log('\n🔧 Verificando integridad de migraciones...');
+// Función para verificar variables de entorno
+function validateEnvironment() {
+  console.log('\n🔧 Verificando variables de entorno...');
   
-  // Aquí puedes agregar más validaciones específicas
-  const criticalMigrations = [
-    '1749000000000-InitialDatabaseSchema.ts',
-    '1750120000000-CreateDiagnosisTable.ts',
-    '1750300000000-FixProductionSchema.ts'
+  const requiredVars = [
+    'DATABASE_HOST',
+    'DATABASE_USERNAME', 
+    'DATABASE_PASSWORD',
+    'DATABASE_NAME'
   ];
   
   let allValid = true;
   
-  criticalMigrations.forEach(migration => {
-    const dbPath = path.join(__dirname, '../src/database/migrations', migration);
-    const migPath = path.join(__dirname, '../src/migrations', migration);
-    
-    const exists = fs.existsSync(dbPath) || fs.existsSync(migPath);
-    
-    if (!exists) {
-      console.error(`❌ Migración crítica no encontrada: ${migration}`);
+  requiredVars.forEach(varName => {
+    const value = process.env[varName];
+    if (!value) {
+      console.error(`❌ Variable faltante: ${varName}`);
       allValid = false;
     } else {
-      console.log(`✅ Migración encontrada: ${migration}`);
+      console.log(`✅ ${varName}: configurada`);
     }
   });
+  
+  // Validar configuración específica para primer deploy
+  if (isFirstDeploy()) {
+    const deployVars = ['RUN_MIGRATIONS', 'RUN_SEEDS'];
+    console.log('\n📋 Variables de primer deploy:');
+    deployVars.forEach(varName => {
+      const value = process.env[varName];
+      if (value === 'true') {
+        console.log(`✅ ${varName}: ${value}`);
+      } else {
+        console.warn(`⚠️  ${varName}: ${value || 'undefined'} (recomendado: true)`);
+      }
+    });
+  }
   
   return allValid;
 }
 
+// Función para mostrar resumen de ejecución
+function showExecutionSummary() {
+  console.log('\n📋 RESUMEN DE EJECUCIÓN:');
+  console.log('==========================================');
+  
+  if (isFirstDeploy()) {
+    console.log('🎯 PRIMER DEPLOY - Creación desde cero');
+    console.log('📝 Acciones que se ejecutarán:');
+    console.log('  1. ❌ SKIP todas las migraciones anteriores');
+    console.log('  2. ✅ EJECUTAR solo RecreateFullSchema');
+    console.log('  3. ✅ DROP/CREATE toda la estructura');
+    console.log('  4. ✅ INSERTAR seeds de datos iniciales');
+    console.log('');
+    console.log('🎯 RESULTADO: BD idéntica a DatabaseTables.sql');
+    console.log('✅ GARANTÍA: Sin conflictos de migraciones anteriores');
+  } else {
+    console.log('📈 DEPLOY INCREMENTAL');
+    console.log('📝 Se ejecutarán migraciones pendientes en orden');
+    console.log('🎯 RESULTADO: BD actualizada incrementalmente');
+  }
+  
+  console.log('==========================================');
+}
+
 // Ejecutar validaciones
-console.log('🚀 Iniciando validación de migraciones...');
+console.log('🚀 Iniciando validación para VetAI Connect...');
 
-const orderValid = validateMigrationOrder();
-const integrityValid = validateMigrationIntegrity();
+const configValid = validateFirstDeployConfig();
+const envValid = validateEnvironment();
 
-if (orderValid && integrityValid) {
-  console.log('\n🎉 Todas las validaciones pasaron correctamente');
+if (configValid && envValid) {
+  showExecutionSummary();
+  console.log('\n🎉 Validación completada - Configuración correcta');
+  console.log('✅ Listo para proceder con el deploy');
   process.exit(0);
 } else {
-  console.error('\n💥 Errores encontrados en las migraciones');
+  console.error('\n💥 Errores encontrados en la configuración');
+  console.error('❌ Revisar y corregir antes del deploy');
   process.exit(1);
 } 

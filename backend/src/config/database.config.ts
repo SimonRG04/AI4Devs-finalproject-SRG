@@ -17,6 +17,9 @@ config();
 
 const configService = new ConfigService();
 
+// Para primer deploy: usar solo la migración de recreación completa
+const isFirstDeploy = configService.get('IS_FIRST_DEPLOY') === 'true';
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: configService.get('DATABASE_HOST') || 'localhost',
@@ -37,10 +40,13 @@ export const AppDataSource = new DataSource({
     Attachment,
     Notification,
   ],
-  migrations: [
-    'src/database/migrations/*.ts',
-    'src/migrations/*.ts'
-  ],
-  synchronize: false, // En producción siempre false
+  // Configuración inteligente de migraciones
+  migrations: isFirstDeploy 
+    ? ['src/database/migrations/1750400000000-RecreateFullSchema.ts']  // Solo RecreateFullSchema para primer deploy
+    : [
+        'src/database/migrations/*.ts',  // Todas las migraciones para deploys incrementales
+        'src/migrations/*.ts'
+      ],
+  synchronize: false,
   logging: configService.get('NODE_ENV') === 'development',
 });
