@@ -30,7 +30,10 @@ describe('AuthController', () => {
     user: {
       id: mockUser.id,
       email: mockUser.email,
+      firstName: mockUser.firstName,
+      lastName: mockUser.lastName,
       fullName: mockUser.fullName,
+      phoneNumber: mockUser.phoneNumber,
       role: mockUser.role,
     },
     expiresIn: 86400,
@@ -124,7 +127,10 @@ describe('AuthController', () => {
       expect(result).toEqual({
         id: mockUser.id,
         email: mockUser.email,
+        firstName: mockUser.firstName,
+        lastName: mockUser.lastName,
         fullName: mockUser.fullName,
+        phoneNumber: mockUser.phoneNumber,
         role: mockUser.role,
         createdAt: mockUser.createdAt,
       });
