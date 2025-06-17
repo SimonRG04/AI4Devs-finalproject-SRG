@@ -146,7 +146,7 @@
                         <ClockIcon class="h-4 w-4 mr-1" />
                         {{ appointment.duration || appointment.durationMinutes }} min
                       </div>
-                      <div v-if="appointment.preDiagnosis" class="flex items-center text-blue-600">
+                      <div v-if="appointment.preDiagnosis || (appointment.aiDiagnoses && appointment.aiDiagnoses.length > 0)" class="flex items-center text-blue-600">
                         <span class="text-lg mr-1">🤖</span>
                         <span class="font-medium">IA Análisis</span>
                       </div>

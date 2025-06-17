@@ -301,55 +301,18 @@
 
               <!-- Diagnosis Results -->
               <div v-else-if="preDiagnosis.status === 'COMPLETED' && preDiagnosis.results" class="space-y-4">
-                <!-- Professional AI Analysis Card -->
-                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-                  <h4 class="text-sm font-semibold text-blue-900 mb-3 flex items-center">
-                    <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                    Análisis de IA - Orientación Preliminar
+                <!-- Professional Header for Veterinarians -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <h4 class="text-sm font-semibold text-blue-900 flex items-center">
+                    🏥 Prediagnóstico de IA - Herramienta de Apoyo Clínico
                   </h4>
-                  
-                  <!-- Conditions -->
-                  <div v-if="preDiagnosis.results.conditions?.length" class="space-y-3">
-                    <div
-                      v-for="(condition, index) in preDiagnosis.results.conditions"
-                      :key="index"
-                      class="bg-white rounded-lg p-3 border"
-                    >
-                      <div class="flex items-center justify-between mb-2">
-                        <h5 class="text-sm font-medium text-gray-900">{{ condition.name }}</h5>
-                        <div class="flex items-center space-x-2">
-                          <span 
-                            :class="[
-                              'px-2 py-1 rounded-full text-xs font-medium',
-                              getSeverityBadgeClass(condition.severity)
-                            ]"
-                          >
-                            {{ getSeverityText(condition.severity) }}
-                          </span>
-                          <span class="text-xs text-gray-500">{{ Math.round(condition.probability * 100) }}%</span>
-                        </div>
-                      </div>
-                      <p class="text-sm text-gray-700">{{ condition.description }}</p>
-                    </div>
-                  </div>
-
-                  <!-- Recommendations -->
-                  <div v-if="preDiagnosis.results.recommendations?.length" class="mt-4">
-                    <h5 class="text-sm font-medium text-gray-900 mb-2">Recomendaciones del sistema:</h5>
-                    <ul class="list-disc list-inside space-y-1">
-                      <li v-for="(rec, index) in preDiagnosis.results.recommendations" :key="index" 
-                          class="text-sm text-gray-700">
-                        {{ rec }}
-                      </li>
-                    </ul>
-                  </div>
-
-                  <!-- Confidence and metadata -->
-                  <div class="mt-4 pt-3 border-t border-blue-200 flex items-center justify-between text-xs text-blue-700">
-                    <span>Confianza del análisis: {{ Math.round((preDiagnosis.confidence || preDiagnosis.results.confidence || 0) * 100) }}%</span>
-                    <span>Procesado el {{ formatDateTime(preDiagnosis.processedAt) }}</span>
-                  </div>
+                  <p class="text-xs text-blue-700 mt-1">
+                    Información preliminar basada en síntomas reportados. Use como orientación en su evaluación profesional.
+                  </p>
                 </div>
+
+                <!-- Use DiagnosisResultCard component for consistent UI -->
+                <DiagnosisResultCard :diagnosis="preDiagnosis" />
 
                 <!-- Original symptoms reported -->
                 <div class="bg-gray-50 rounded-lg p-4 border">
@@ -590,6 +553,7 @@ import {
 import NewMedicalRecordModal from '../../components/modals/NewMedicalRecordModal.vue'
 import RescheduleModal from '../../components/modals/RescheduleModal.vue'
 import NotesModal from '../../components/modals/NotesModal.vue'
+import DiagnosisResultCard from '../../components/diagnosis/DiagnosisResultCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -674,7 +638,29 @@ const loadAppointmentData = async () => {
     
     const appointmentData = await appointmentsStore.fetchAppointment(appointmentId.value)
     appointment.value = appointmentData
-    preDiagnosis.value = appointmentData.preDiagnosis
+    
+    // Manejo del prediagnóstico - misma lógica que la vista del cliente
+    let diagnosis = null
+    console.log('Raw appointment data:', appointmentData)
+    
+    // 1. Desde el campo transformado preDiagnosis (backend DTO)
+    if (appointmentData.preDiagnosis) {
+      diagnosis = appointmentData.preDiagnosis
+      console.log('Pre-diagnosis from DTO:', diagnosis)
+    }
+    // 2. Desde el array aiDiagnoses (fallback si no está transformado)
+    else if (appointmentData.aiDiagnoses && appointmentData.aiDiagnoses.length > 0) {
+      diagnosis = appointmentData.aiDiagnoses[0] // Tomar el primero (más reciente)
+      console.log('Pre-diagnosis from aiDiagnoses array:', diagnosis)
+    }
+    
+    preDiagnosis.value = diagnosis
+    
+    if (preDiagnosis.value) {
+      console.log('Pre-diagnosis found:', preDiagnosis.value)
+    } else {
+      console.log('No pre-diagnosis found for this appointment')
+    }
     
     // Load recent medical records for the pet
     if (appointmentData.pet?.id) {
@@ -815,23 +801,7 @@ const getDiagnosisStatusText = (status) => {
   return translate('preDiagnosisStatus', status)
 }
 
-const getSeverityBadgeClass = (severity) => {
-  const classes = {
-    'LOW': 'bg-green-100 text-green-800',
-    'MEDIUM': 'bg-yellow-100 text-yellow-800',
-    'HIGH': 'bg-red-100 text-red-800'
-  }
-  return classes[severity] || 'bg-gray-100 text-gray-800'
-}
 
-const getSeverityText = (severity) => {
-  const severityLabels = {
-    'LOW': 'Baja',
-    'MEDIUM': 'Media',
-    'HIGH': 'Alta'
-  }
-  return severityLabels[severity] || severity
-}
 
 const refreshDiagnosis = async () => {
   try {
